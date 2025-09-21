@@ -1,0 +1,90 @@
+<form action="/billing" method="get">
+    <fieldset class="form-fieldset">
+        <div class="row">
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Customer Name</label>
+                <input name="customerName" type="text" class="form-control" autocomplete="off"
+                    placeholder="John Doe, William, Smith" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">PIC</label>
+                <input name="pic" type="text" class="form-control" autocomplete="off" placeholder="PIC1, PIC2" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">Account ID</label>
+                <input name="accountID" type="text" class="form-control" autocomplete="off" />
+            </div>
+            <div class="col-md-3 mb-3">
+                <label class="form-label">CL Number</label>
+                <input name="clNumber" type="text" class="form-control" autocomplete="off" placeholder="CL21agusXXX" />
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-2 mb-3">
+                <label class="form-label">CL Date</label>
+                <input name="clDate" type="text" class="form-control" autocomplete="off" id="dateRangeCLDate" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Invoice Number</label>
+                <input name="invoiceNo" type="text" class="form-control" autocomplete="off" placeholder="INV_00XX">
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Invoice Date</label>
+                <input name="invoiceDate" type="text" class="form-control" autocomplete="off"
+                    id="dateRangeInvoiceDate" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Email Sent</label>
+                <input name="emailSent" type="text" class="form-control" autocomplete="off"
+                    placeholder="mail1@mail.com, mail2@mail.com" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Email Sent Date</label>
+                <input name="emailSentDate" type="text" class="form-control" autocomplete="off"
+                    id="dateRangeEmailSentDate" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Status</label>
+                <select name="billingStatus" class="form-select">
+                    <option value="">Select Status</option>
+                    <option value="PAID">Invoice Paid</option>
+                    <option value="PARTIAL_PAID">Partial Paid</option>
+                    <option value="EMAIL_READ">E-mail Read</option>
+                    <option value="UNPAID">E-Mail Sent</option>
+                    <option value="REJECTED">Rejected</option>
+                    <option value="CANCELLED">Canceled</option>
+                </select>
+            </div>
+        </div>
+        <div class="btn-list">
+            <a href="/billing" class="btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-circle-letter-x" width="24"
+                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                    <path d="M10 8l4 8"></path>
+                    <path d="M10 16l4 -8"></path>
+                </svg>
+                Clear
+            </a>
+            <button type="submit" class="btn btn-info">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-adjustments-alt" width="24"
+                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M4 8h4v4h-4z"></path>
+                    <path d="M6 4l0 4"></path>
+                    <path d="M6 12l0 8"></path>
+                    <path d="M10 14h4v4h-4z"></path>
+                    <path d="M12 4l0 10"></path>
+                    <path d="M12 18l0 2"></path>
+                    <path d="M16 5h4v4h-4z"></path>
+                    <path d="M18 4l0 1"></path>
+                    <path d="M18 9l0 11"></path>
+                </svg>
+                Filter
+            </button>
+        </div>
+    </fieldset>
+</form>

@@ -1,0 +1,111 @@
+<div class="table-responsive">
+    <table class="table table-vcenter">
+        <thead>
+            <tr>
+                <th>Account ID</th>
+                <th>Customer Name</th>
+                <th>CL Number</th>
+                <th>CL Date</th>
+                <th>Invoice No</th>
+                <th>Invoice Date</th>
+                <th class="text-center">Email <br /> Sending Date</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Status Remark</th>
+                <th class="w-1 text-center">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <% for (item of logs) { %>
+                <tr style="<%= item.status === 'cancelled' ? 'background-color: rgba(250,128,114, 0.1);' : '' %>">
+                    <td>
+                        <%= item.invoiceDetail.customer %>
+                    </td>
+                    <td>
+                        <%= item.invoiceDetail.cloCustName %>
+                    </td>
+                    <td>
+                        <%= item.clNumber %>
+                    </td>
+                    <td><code><%= moment(item.invoiceDetail.cldate).format('MM/DD/YYYY') %></code></td>
+                    <td class="text-muted">
+                        <%= item.invoiceNumber %>
+                    </td>
+                    <td><code><%= moment(item.invoiceDetail.invdate).format('MM/DD/YYYY') %></code></td>
+                    <td>
+                        <% if(item.emailSendDate) { %>
+                            <code><%= moment(item.emailSendDate).format('MM/DD/YYYY') %></code>
+                            <% } else { %>
+                                -
+                                <% } %>
+                    </td>
+                    <td style="width: fit-content;">
+                        <ul>
+                            <% for (const status of item.statuses) { %>
+                                <% if (status !=='EMAIL NOT FOUND' ) { %>
+                                    <li style="text-transform: lowercase;">
+                                        <code><%= status %></code>
+                                    </li>
+                                    <% } %>
+                                        <% } %>
+                        </ul>
+                    </td>
+                    <td class="text-muted">
+                        <ul>
+                            <% for (const status of item.statusRemark) { %>
+                                <li style="text-transform: lowercase;">
+                                    <code><%= status %></code>
+                                </li>
+                                <% } %>
+                        </ul>
+                    </td>
+                    <% if(item.status !=='cancelled' && !item.emailSent ) { %>
+                        <td class="btn-list flex-nowrap">
+                            <button type="button" class="btn btn-danger btn-md" data-bs-toggle="modal"
+                                data-bs-target="#modal-reject-invoice"
+                                @click="fillInvoiceData(JSON.parse($el.getAttribute('data-item')))"
+                                :data-item="'<%= JSON.stringify(item) %>'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban"
+                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                                    <path d="M5.7 5.7l12.6 12.6"></path>
+                                </svg>
+                                Cancel
+                            </button>
+                        </td>
+                        <% } else { %>
+                            <td>-</td>
+                            <% } %>
+                </tr>
+                <% } %>
+        </tbody>
+    </table>
+
+    <br>
+    <br>
+    <!-- Pagination -->
+    <nav aria-label="Page navigation">
+        <div class="text-center mb-2">
+            Showing <%= startIdx %> to <%= endIdx %> of <%= totalLogs %> documents
+        </div>
+        <ul class="pagination justify-content-center">
+            <li class="page-item<%= currentPage === 1 ? ' disabled' : '' %>">
+                <a class="page-link" href="?<%= queryString %>&page=1&pageSize=<%= pageSize %>">First</a>
+            </li>
+            <li class="page-item<%= currentPage === 1 ? ' disabled' : '' %>">
+                <a class="page-link"
+                    href="?<%= queryString %>&page=<%= currentPage - 1 %>&pageSize=<%= pageSize %>">Previous</a>
+            </li>
+            <li class="page-item<%= currentPage === totalPages ? ' disabled' : '' %>">
+                <a class="page-link"
+                    href="?<%= queryString %>&page=<%= currentPage + 1 %>&pageSize=<%= pageSize %>">Next</a>
+            </li>
+            <li class="page-item<%= currentPage === totalPages ? ' disabled' : '' %>">
+                <a class="page-link" href="?<%= queryString %>&page=<%= totalPages %>&pageSize=<%= pageSize %>">Last</a>
+            </li>
+        </ul>
+    </nav>
+    <!-- End Pagination -->
+
+</div>

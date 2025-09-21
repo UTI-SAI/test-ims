@@ -1,0 +1,44 @@
+<div class="modal modal-blur fade" id="modal-upload-billing" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal-dialog modal-lg" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Upload File Excel</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="post" action="/billing/attach-file" autocomplete="off" novalidate>
+                <div class="modal-body">
+                    <input type="hidden" name="clNumber" x-model="clNumber">
+                    <div class="mb-3">
+                        <div class="dropzone" id="dropzone-custom">
+                            <div class="fallback">
+                                <input name="file" type="file" />
+                            </div>
+                            <div class="dz-message">
+                                <h3 class="dropzone-msg-title">Select Your File</h3>
+                            </div>
+                        </div>
+                    </div>
+
+                    <span><small style="color: #d63939;">Maximum file size is 10MB</small></span>
+                </div>
+                <div class="modal-footer">
+                    <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal" id="clear-dropzone">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-success ms-auto">
+                        <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-cloud-upload" width="24"
+                            height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                            <path d="M7 18a4.6 4.4 0 0 1 0 -9a5 4.5 0 0 1 11 2h1a3.5 3.5 0 0 1 0 7h-1"></path>
+                            <path d="M9 15l3 -3l3 3"></path>
+                            <path d="M12 12l0 9"></path>
+                        </svg>
+                        Upload
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>

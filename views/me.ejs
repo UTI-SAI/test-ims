@@ -1,0 +1,81 @@
+<%- include('partials/header') -%>
+<title>Preference | <%= appName %></title>
+
+<body>
+    <script src="/dist/js/demo-theme.min.js?1684106062"></script>
+    <div class="page">
+        <!-- Sidebar -->
+        <%- include('partials/sidebar') -%>
+        <div class="page-wrapper">
+            <!-- Page header -->
+            <div class="page-header d-print-none">
+                <div class="container-xl">
+                    <div class="row g-2 align-items-center">
+                        <div class="col">
+                            <!-- Page pre-title -->
+                            <div class="page-pretitle">
+                                Overview
+                            </div>
+                            <h2 class="page-title">
+                                Preference
+                            </h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <!-- Page body -->
+            <div class="page-body">
+                <div class="container-xl">
+                    <div class="row row-cards">
+                        <div class="col-lg-4">
+                            <fieldset class="form-fieldset">
+                                <h3>Change Password</h3>
+                                <div class="mb-3">
+                                    <label class="form-label required">Old Password</label>
+                                    <input type="password" class="form-control" autocomplete="off" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label required">New Password</label>
+                                    <input type="password" class="form-control" autocomplete="off" />
+                                </div>
+
+                                <div class="mb-3">
+                                    <label class="form-label required">Confirm Password</label>
+                                    <input type="password" class="form-control" autocomplete="off" />
+                                </div>
+
+                                <a href="#" class="btn btn-primary ms-auto" data-bs-dismiss="modal">
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-device-floppy" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M6 4h10l4 4v10a2 2 0 0 1 -2 2h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2">
+                                        </path>
+                                        <path d="M12 14m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                        <path d="M14 4l0 4l-6 0l0 -4"></path>
+                                    </svg>
+                                    Save
+                                </a>
+
+                            </fieldset>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Add User -->
+    <%- include('modals/addUsers') -%>
+
+    <!-- Modal Edit User -->
+    <%- include('modals/editUsers') -%>
+
+    <!-- Tabler Core -->
+    <script src="/dist/js/tabler.min.js?1684106062" defer></script>
+    <script src="/dist/js/demo.min.js?1684106062" defer></script>
+</body>
+
+<%- include('partials/footer') -%>

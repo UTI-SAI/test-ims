@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+        }
+
+        p {
+            color: #666;
+            line-height: 1.6;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+
+        th,
+        td {
+            padding: 12px;
+            text-align: left;
+            border-bottom: 1px solid #ddd;
+        }
+
+        th {
+            background-color: #f9f9f9;
+            color: #333;
+        }
+
+        td {
+            color: #555;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="container">
+        <h2>{CUSTOMER_NAME}</h2>
+        <br>
+        <br>
+        <b>Dear Valued Customer,</b>
+
+        <br>
+        <p>Here with we send the scan copy of the invoice.</p>
+
+        <table>
+            <tr>
+                <th>Detail</th>
+                <th>Value</th>
+            </tr>
+            <tr>
+                <td>CL Number</td>
+                <td>{CL_NUMBER}</td>
+            </tr>
+            <tr>
+                <td>Invoice Number</td>
+                <td>
+                    <ul style="list-style-type: none; margin: 0; padding: 0;">
+                        {INVOICE_NUMBER_ALL}
+                    </ul>
+                </td>
+            </tr>
+        </table>
+        
+        <br>
+
+        <p>Please find attached out invoice on the portal and kindly inform us of any errors</p>
+
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="{INVOICE_URL}" target="_blank"
+                style="display: inline-block; background-color: #007bff; color: white; padding: 12px 24px; border-radius: 4px; text-decoration: none; cursor: pointer;">
+                Click Here
+            </a>
+        </div>
+
+        <br>
+        <br>
+        <br>
+        <p>Thank you.</p>
+        <br>
+        <p>Regards,</p>
+        <p>Billing Support</p>
+    </div>
+
+</body>
+
+</html>

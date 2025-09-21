@@ -1,0 +1,66 @@
+<div class="table-responsive">
+    <table class="table table-vcenter">
+        <thead>
+            <tr>
+                <th class="text-center">CL Number</th>
+                <th class="text-center">CL Date</th>
+                <th class="text-center">No. Invoice</th>
+                <th class="text-center">Invoice Date</th>
+                <th class="text-center">Account ID</th>
+                <th class="text-center">Download Invoice</th>
+                <th class="text-center">Email Send Date</th>
+                <th class="text-center">Status</th>
+                <th class="text-center">Excel Summary
+                    <br. /> Invoice
+                </th>
+                <th class="w-1 text-center">Action</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>CL21agus2023</td>
+                <td><code>10/08/2023</code></td>
+                <td>INV_001</td>
+                <td><code>10/08/2023</code></td>
+                <td>ID_0017</td>
+                <td>
+                    <button type="button" class="btn btn-sm">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-book-download"
+                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                            fill="none" stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                            <path d="M12 20h-6a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12v5"></path>
+                            <path d="M13 16h-7a2 2 0 0 0 -2 2"></path>
+                            <path d="M15 19l3 3l3 -3"></path>
+                            <path d="M18 22v-9"></path>
+                        </svg>
+                        Download
+                    </button>
+                </td>
+                <td><code>10/08/2023</code></td>
+                <td>
+                    <span class="status status-orange">
+                        <span class="status-dot"></span>
+                        Document Not Complete
+                    </span>
+                </td>
+                <td class="text-muted text-center">
+                    <a href="">filename.xlsx</a>
+                </td>
+                <td class="btn-list flex-nowrap">
+                    <button type="button" class="btn btn-danger btn-md" data-bs-toggle="modal"
+                        data-bs-target="#modal-reject-invoice">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban" width="24"
+                            height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                            <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                            <path d="M5.7 5.7l12.6 12.6"></path>
+                        </svg>
+                        Reject
+                    </button>
+                </td>
+            </tr>
+        </tbody>
+    </table>
+</div>

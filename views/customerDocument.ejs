@@ -1,0 +1,133 @@
+<%- include('partials/header') -%>
+    <title>Customer Monitoring | <%= appName %>
+    </title>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('customerBilling', () => ({
+                invoice: {},
+                fillInvoiceData(item) {
+                    console.log('invoice', item)
+                    this.invoice = item;
+                },
+            }));
+        });
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const urlParams = new URLSearchParams(window.location.search);
+
+            const searchingParameter = window.location.search;
+            document.getElementById('exportQueryString').value = searchingParameter;
+
+            document.querySelector("input[name='range']").value = urlParams.get('range') || '';
+            document.querySelector("input[name='accountID']").value = urlParams.get('accountID') || '';
+            document.querySelector("input[name='clNumber']").value = urlParams.get('clNumber') || '';
+            document.querySelector("input[name='clDate']").value = urlParams.get('clDate') || '';
+            document.querySelector("input[name='invoiceNo']").value = urlParams.get('invoiceNo') || '';
+            document.querySelector("input[name='invoiceDate']").value = urlParams.get('invoiceDate') || '';
+        });
+    </script>
+
+    <style>
+        .icon-wrapper {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+        }
+    </style>
+
+    <body x-data="customerBilling">
+        <script src="/dist/js/demo-theme.min.js?1684106062"></script>
+        <div class="page">
+            <!-- Sidebar -->
+            <%- include('partials/sidebar') -%>
+                <div class="page-wrapper">
+                    <!-- Page header -->
+                    <div class="page-header d-print-none">
+                        <div class="container-xl">
+                            <div class="row g-2 align-items-center">
+                                <div class="col">
+                                    <!-- Page pre-title -->
+                                    <div class="page-pretitle">
+                                        Overview
+                                    </div>
+                                    <h2 class="page-title">
+                                        Customer Monitoring
+                                    </h2>
+                                </div>
+
+                                <!-- Page title actions -->
+                                <div class="col-auto ms-auto d-print-none">
+                                    <div class="btn-list">
+                                        <a href="#" class="btn btn-primary d-none d-sm-inline-block"
+                                            data-bs-toggle="modal" data-bs-target="#modal-export-customer">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="icon icon-tabler icon-tabler-database-export" width="24"
+                                                height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                                fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                <path
+                                                    d="M4 6c0 1.657 3.582 3 8 3s8 -1.343 8 -3s-3.582 -3 -8 -3s-8 1.343 -8 3">
+                                                </path>
+                                                <path d="M4 6v6c0 1.657 3.582 3 8 3c1.118 0 2.183 -.086 3.15 -.241">
+                                                </path>
+                                                <path d="M20 12v-6"></path>
+                                                <path d="M4 12v6c0 1.657 3.582 3 8 3c.157 0 .312 -.002 .466 -.005">
+                                                </path>
+                                                <path d="M16 19h6"></path>
+                                                <path d="M19 16l3 3l-3 3"></path>
+                                            </svg>
+                                            Exports
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Page body -->
+                    <div class="page-body">
+                        <div class="container-fluid">
+                            <%- include('fieldset/filterCustomerBilling') -%>
+                                <div class="row row-cards">
+                                    <div class="col-lg-12">
+                                        <div class="card">
+                                            <%- include('tables/customerBilling') -%>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <!-- Modal Reject Billing -->
+        <%- include('modals/rejectInvoiceCustomer') -%>
+
+            <!-- Modal Export Billing -->
+            <%- include('modals/exportCustomerBilling') -%>
+
+                <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+                <script>
+                    var picker = new Litepicker({
+                        element: document.getElementById('dateRange'),
+                        singleMode: false,
+                        allowRepick: true,
+                        singleMode: false,
+                        numberOfMonths: 1,
+                        showMonthYearPickers: true, // enable month and year dropdowns
+                        dropdowns: {
+                            minYear: 1990,
+                            maxYear: null,
+                            months: true,
+                            years: true
+                        },
+                        onSelect: function (start, end) {
+                            // You have your start and end date here
+                        }
+                    });
+                </script>
+    </body>
+
+    <%- include('partials/footer') -%>

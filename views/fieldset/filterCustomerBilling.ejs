@@ -1,0 +1,63 @@
+<form action="/customer-document" method="get">
+    <fieldset class="form-fieldset">
+        <div class="row">
+            <div class="col-md-4 mb-1">
+                <label class="form-label">Date Range</label>
+                <input name="range" type="text" class="form-control" id="dateRange" autocomplete="off" />
+            </div>
+            <div class="col-md-4 mb-1">
+                <label class="form-label">Account ID</label>
+                <input name="accountID" type="text" class="form-control" autocomplete="off" placeholder="JSX123" />
+            </div>
+            <div class="col-md-4 mb-1">
+                <label class="form-label">Invoice Number</label>
+                <input name="invoiceNo" type="text" class="form-control" autocomplete="off"
+                    placeholder="INV_00XX">
+            </div>
+        </div>
+        <div class="row">
+            <div class="col-md-4 mb-1">
+                <label class="form-label">Invoice Date</label>
+                <input name="invoiceDate" type="date" class="form-control" autocomplete="off" />
+            </div>
+            <div class="col-md-4 mb-1">
+                <label class="form-label">CL Number</label>
+                <input name="clNumber" type="text" class="form-control" autocomplete="off" placeholder="CL21agusXXX" />
+            </div>
+            <div class="col-md-4 mb-1">
+                <label class="form-label">CL Date</label>
+                <input name="clDate" type="date" class="form-control" autocomplete="off" />
+            </div>
+        </div>
+        <div class="btn-list">
+            <a href="/customer-document" class="btn">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-circle-letter-x" width="24"
+                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                    <path d="M10 8l4 8"></path>
+                    <path d="M10 16l4 -8"></path>
+                </svg>
+                Clear
+            </a>
+            <button type="submit" class="btn btn-info">
+                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-adjustments-alt" width="24"
+                    height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                    stroke-linecap="round" stroke-linejoin="round">
+                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                    <path d="M4 8h4v4h-4z"></path>
+                    <path d="M6 4l0 4"></path>
+                    <path d="M6 12l0 8"></path>
+                    <path d="M10 14h4v4h-4z"></path>
+                    <path d="M12 4l0 10"></path>
+                    <path d="M12 18l0 2"></path>
+                    <path d="M16 5h4v4h-4z"></path>
+                    <path d="M18 4l0 1"></path>
+                    <path d="M18 9l0 11"></path>
+                </svg>
+                Filter
+            </button>
+        </div>
+    </fieldset>
+</form>
