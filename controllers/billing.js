@@ -129,6 +129,30 @@ exports.fetchCustomerBilling = async (req, res) => {
     //   query["billingStatus"] = billingStatus;
     // }
 
+    if (billingStatus) {
+      if (billingStatus === "EMAIL_READ") {
+        query["customerDownloadHistory"] = {
+          $gt: [{ $size: "$customerDownloadHistory" }, 0],
+        };
+        query["$or"] = [
+          { billingStatus: { $exists: false } }, // Kondisi ketika `billingStatus` tidak ada
+          { billingStatus: { $ne: "PAID" } }, // Kondisi ketika `billingStatus` bukan "PAID"
+        ];
+      } else if (billingStatus === "UNPAID") {
+        query["customerDownloadHistory"] = { $size: 0 };
+        query["$or"] = [
+          { billingStatus: { $exists: false } }, // Kondisi ketika `billingStatus` tidak ada
+          { billingStatus: { $ne: "PAID" } }, // Kondisi ketika `billingStatus` bukan "PAID"
+        ];
+      } else if (billingStatus === "REJECTED") {
+        query["isRejected"] = true;
+      } else {
+        query["billingStatus"] = billingStatus; // CANCELLED Situation handled on here
+      }
+    }
+
+    console.log("query", query);
+
     if (id) {
       query["_id"] = new ObjectId(id);
     }
@@ -149,7 +173,7 @@ exports.fetchCustomerBilling = async (req, res) => {
       req: req.user,
       clonedUser,
     });
-    query["billingStatus"] = { $ne: "CANCELLED" };
+    // query["billingStatus"] = { $ne: "CANCELLED" };
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
