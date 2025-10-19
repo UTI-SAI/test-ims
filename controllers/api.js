@@ -339,19 +339,24 @@ exports.downloadInvoice = async (req, res) => {
     const pdfPath = path.join(networkPath);
 
     // CHeck if path valid to prevent app terminated
-    function checkPath(path) {
-      if (!fs.existsSync(path)) {
-        console.log('Path is not valid');
-        return res.json({
-          message: 'Invoice file not exist, please check again later',
-        });
-      }
+    if (!fs.existsSync(pdfPath)) {
+      console.log('Path is not valid');
+      return res.json({
+        message: 'Invoice file not exist, please check again later',
+      });
     }
 
-    checkPath(pdfPath);
-
     res.contentType('application/pdf');
-    fs.createReadStream(pdfPath).pipe(res);
+
+    const stream = fs.createReadStream(pdfPath);
+    stream.on('error', (err) => {
+      console.error('Stream error:', err);
+      if (!res.headersSent) {
+        res.status(500).send('Error reading file');
+      }
+    });
+
+    stream.pipe(res);
   } catch (e) {
     console.error('error ', e);
     res.status(404).send('404 Not Found');
