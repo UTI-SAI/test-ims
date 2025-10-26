@@ -597,6 +597,8 @@ exports.exportsCustomerBilling = async (req, res) => {
   const csvWriter = createCsvWriter({
     path: fileName,
     header: [
+      { id: "accountID", title: "ACCOUNT ID" },
+      { id: "cloCustName", title: "CUSTOMER NAME" },
       { id: "clNumber", title: "CL NUMBER" },
       { id: "clDate", title: "CL DATE" },
       { id: "invoiceNo", title: "INVOICE NO" },
@@ -607,16 +609,20 @@ exports.exportsCustomerBilling = async (req, res) => {
     ],
   });
 
+  console.log(billings);
+
   const flatData = billings.map((item) => ({
+    accountID: item.accountID,
+    cloCustName: item.invoice.cloCustName,
     clNumber: item.invoice.clnumber,
     clDate: moment(item.invoice.cldate).format("MM/DD/YYYY"),
     invoiceNo: item.invoice.invoiceno,
     invoiceDate: moment(item.invoice.invdate).format("MM/DD/YYYY"),
+    downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
     emailSendDate: item.emailSendDate
       ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm")
       : "-",
     status: getBillingStatus(item),
-    downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
   }));
 
   csvWriter.writeRecords(flatData).then(() => {
