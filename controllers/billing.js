@@ -205,6 +205,7 @@ exports.fetchCustomerBilling = async (req, res) => {
       startIdx,
       endIdx,
       totalBilling,
+      clearSelected: Object.keys(req.query).length === 0,
     });
   } catch (error) {
     console.error(error);
@@ -558,7 +559,7 @@ const getBillingStatus = (item) => {
 
 exports.exportsCustomerBilling = async (req, res) => {
   const { HOST } = process.env;
-  const { reportType, queryString } = req.query;
+  const { reportType, queryString, selectedIds } = req.query;
 
   const params = new URLSearchParams(queryString);
 
@@ -585,6 +586,13 @@ exports.exportsCustomerBilling = async (req, res) => {
   if (reportType === "CURRENT") {
     const query = buildBillingSearchQuery(searchParam);
     billings = await collection.find(query).toArray();
+  } else if (reportType === "MULTIPLE_ROW") {
+    if (!selectedIds) {
+      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
+    }
+
+    const ids = selectedIds.split(",").map((id) => new mongoose.Types.ObjectId(id.trim()));
+    billings = await collection.find({ _id: { $in: ids } }).toArray();
   } else {
     const filter = {
       billingStatus: { $ne: "CANCELLED" },

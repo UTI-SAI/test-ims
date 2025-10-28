@@ -1,173 +1,251 @@
-<div class="table-responsive">
-    <table class="table table-vcenter">
-        <thead>
-            <tr>
-                <th>CL Number</th>
-                <th>CL Date</th>
-                <th>Invoice No</th>
-                <th>Invoice Date</th>
-                <th>Account ID</th>
-                <th class="text-center">Download Invoice</th>
-                <th class="text-center">Email Send Date</th>
-                <th class="text-center">Status</th>
-                <th class="text-center">Excel <br /> Summary Invoice</th>
-                <th class="w-1 text-center">Action</th>
-            </tr>
-        </thead>
-        <tbody>
-            <% for(const bill of billing) { %>
+<div 
+    x-data="{
+        selectedItems: JSON.parse(localStorage.getItem('selectedItems') || '[]'),
+        selectAll: false,
+
+        toggleSelectAll() {
+            const allCheckboxes = [...document.querySelectorAll('.select-item')];
+            if (this.selectAll) {
+                this.selectedItems = allCheckboxes.map(el => el.value);
+                allCheckboxes.forEach(el => el.checked = true);
+            } else {
+                this.selectedItems = [];
+                allCheckboxes.forEach(el => el.checked = false);
+            }
+            this.syncStorage();
+        },
+
+        updateSelectAll() {
+            const allCheckboxes = [...document.querySelectorAll('.select-item')];
+            const checkedCheckboxes = allCheckboxes.filter(el => el.checked);
+            this.selectAll = allCheckboxes.length > 0 && checkedCheckboxes.length === allCheckboxes.length;
+            this.syncStorage();
+        },
+
+        syncStorage() {
+            // Update localStorage
+            localStorage.setItem('selectedItems', JSON.stringify(this.selectedItems));
+
+            // Update hidden input for export modal
+            const selectedInput = document.getElementById('selectedIds');
+            if (selectedInput) {
+                selectedInput.value = this.selectedItems.join(',');
+            }
+
+            // Update count display (handled automatically by Alpine)
+            console.log('Selected items synced:', this.selectedItems);
+        },
+
+        restoreCheckboxes() {
+            const allCheckboxes = [...document.querySelectorAll('.select-item')];
+            const storedItems = JSON.parse(localStorage.getItem('selectedItems') || '[]');
+
+            allCheckboxes.forEach(el => {
+                el.checked = storedItems.includes(el.value);
+            });
+
+            this.selectedItems = storedItems;
+
+            this.selectAll = allCheckboxes.length > 0 && allCheckboxes.every(el => el.checked);
+        }
+
+    }"
+
+    x-init="
+        restoreCheckboxes();
+
+        // Watch for changes in selectedItems
+        $watch('selectedItems', () => syncStorage());
+    "
+>
+
+    <div class="table-responsive">
+        <div class="text-muted p-2 mt-2">
+            <span x-text="`${selectedItems.length} selected`"></span>
+        </div>
+        <table class="table table-vcenter">
+            <thead>
                 <tr>
-                    <td>
-                        <%= bill.invoice.clnumber %>
-                    </td>
-                    <td><code><%= moment(bill.invoice.cldate).format("MM/DD/YYYY") %></code></td>
-                    <td class="text-muted">
-                        <%= bill.invoice.invoiceno %>
-                    </td>
-                    <td><code><%= moment(bill.invoice.invdate).format("MM/DD/YYYY") %></code></td>
-                    <td>
-                        <%= bill.accountID %>
-                    </td>
-                    <td class="text-center">
-                        <a target="_blank" href="/api/invoices/download/<%= bill._id %>"
-                            style="width: 30px; height: 30px;" class="btn btn-xs btn-white">
-                            <div class="icon-wrapper">
-                                <svg style="margin: auto; width: 15px; height: 15px;" xmlns="http://www.w3.org/2000/svg"
-                                    class="icon icon-tabler icon-tabler-cloud-download" width="10" height="10"
-                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                                    stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4">
-                                    </path>
-                                    <path d="M12 13l0 9"></path>
-                                    <path d="M9 19l3 3l3 -3"></path>
-                                </svg>
-                            </div>
-                        </a>
-                        <br>
-                        <ul style="text-align: left;">
-                            <% for (const file of bill.customerDownloadHistory) { %>
-                                <li>
-                                    <small><code><%= file.email %> - </code></small>
-                                    <small><code><%= moment(file.date).format("MM/DD/YYYY") %></code></small>
-                                </li>
-                                <% } %>
-                        </ul>
-                    </td>
-                    <td class="text-muted text-center">
-                        <code><%= moment(bill.emailSendDate).format("MM/DD/YYYY HH:mm") %></code>
-                    </td>
-                    <td style="width: fit-content;">
-                        <% if (bill.billingStatus==='PAID' ) { %>
-                            <span class="status status-green">
-                                <span class="status-dot"></span>
-                                <span style="font-size: 0.8rem;">Paid</span>
-                            </span>
-                            <% } else if (bill.billingStatus==='PARTIAL_PAID' ) { %>
-                                <span class="status status-orange">
-                                    <span class="status-dot"></span>
-                                    <span style="font-size: 0.8rem;">Partial Paid</span>
-                                </span>
-                                <% } else if (bill.customerDownloadHistory.length> 0) { %>
-                                    <span class="status status-blue">
-                                        <span class="status-dot"></span>
-                                        <span style="font-size: 0.8rem;">Email Read</span>
-                                    </span>
-                                    <% } else { %>
-                                        <span class="status status-blue">
-                                            <span class="status-dot"></span>
-                                            <span style="font-size: 0.8rem;">Email Sent</span>
-                                        </span>
-                                        <% } %>
-                                            <% if (bill.billingStatus==='CANCELLED' ) { %>
-                                                <span class="status status-red">
-                                                    <span class="status-dot"></span>
-                                                    <span style="font-size: 0.8rem;">Canceled</span>
-                                                </span>
-                                                <% } %>
-                                                    <% if (bill.isRejected ) { %>
-                                                        <span class="status status-red">
-                                                            <span class="status-dot"></span>
-                                                            <span style="font-size: 0.8rem;">Rejected</span>
-                                                        </span>
-                                                        <% } %>
-                    </td>
-                    <td class="text-muted text-center">
-                        <% if (bill.excelSummaryInvoice) { %>
-                            <a href="/uploads/<%= bill.excelSummaryInvoice %>" target="_blank"
+                    <th class="text-center">
+                        <input type="checkbox" id="select-all"
+                            x-model="selectAll"
+                            @change="toggleSelectAll">
+                    </th>
+                    <th>CL Number</th>
+                    <th>CL Date</th>
+                    <th>Invoice No</th>
+                    <th>Invoice Date</th>
+                    <th>Account ID</th>
+                    <th class="text-center">Download Invoice</th>
+                    <th class="text-center">Email Send Date</th>
+                    <th class="text-center">Status</th>
+                    <th class="text-center">Excel <br /> Summary Invoice</th>
+                    <th class="w-1 text-center">Action</th>
+                </tr>
+            </thead>
+            <tbody>
+                <% for(const bill of billing) { %>
+                    <tr>
+                        <td class="text-center">
+                            <input type="checkbox"
+                                class="select-item"
+                                :value="'<%= bill._id %>'"
+                                x-model="selectedItems"
+                                @change="updateSelectAll">
+                        </td>
+                        <td>
+                            <%= bill.invoice.clnumber %>
+                        </td>
+                        <td><code><%= moment(bill.invoice.cldate).format("MM/DD/YYYY") %></code></td>
+                        <td class="text-muted">
+                            <%= bill.invoice.invoiceno %>
+                        </td>
+                        <td><code><%= moment(bill.invoice.invdate).format("MM/DD/YYYY") %></code></td>
+                        <td>
+                            <%= bill.accountID %>
+                        </td>
+                        <td class="text-center">
+                            <a target="_blank" href="/api/invoices/download/<%= bill._id %>"
                                 style="width: 30px; height: 30px;" class="btn btn-xs btn-white">
                                 <div class="icon-wrapper">
-                                    <svg style="margin: auto; width: 15px; height: 15px;"
-                                        xmlns="http://www.w3.org/2000/svg"
+                                    <svg style="margin: auto; width: 15px; height: 15px;" xmlns="http://www.w3.org/2000/svg"
                                         class="icon icon-tabler icon-tabler-cloud-download" width="10" height="10"
                                         viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
                                         stroke-linecap="round" stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                        <path
-                                            d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4">
+                                        <path d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4">
                                         </path>
                                         <path d="M12 13l0 9"></path>
                                         <path d="M9 19l3 3l3 -3"></path>
                                     </svg>
                                 </div>
                             </a>
-                            <% } else { %>
-                                -
-                                <% } %>
-                    </td>
-                    <td class="flex-nowrap">
-                        <% if (!bill.isRejected && bill.billingStatus !="PAID" ) { %>
-                            <button type="button" class="btn btn-danger btn-xs" data-bs-toggle="modal"
-                                data-bs-target="#modal-reject-invoice-customer"
-                                @click="fillInvoiceData(JSON.parse($el.getAttribute('data-item')))"
-                                :data-item="'<%= JSON.stringify(bill) %>'">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban"
-                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
-                                    <path d="M5.7 5.7l12.6 12.6"></path>
-                                </svg>
-                                Reject
-                            </button>
-                            <% } else { %>
-                                <button type="button" class="btn btn-danger btn-xs" disabled>
+                            <br>
+                            <ul style="text-align: left;">
+                                <% for (const file of bill.customerDownloadHistory) { %>
+                                    <li>
+                                        <small><code><%= file.email %> - </code></small>
+                                        <small><code><%= moment(file.date).format("MM/DD/YYYY") %></code></small>
+                                    </li>
+                                    <% } %>
+                            </ul>
+                        </td>
+                        <td class="text-muted text-center">
+                            <code><%= moment(bill.emailSendDate).format("MM/DD/YYYY HH:mm") %></code>
+                        </td>
+                        <td style="width: fit-content;">
+                            <% if (bill.billingStatus==='PAID' ) { %>
+                                <span class="status status-green">
+                                    <span class="status-dot"></span>
+                                    <span style="font-size: 0.8rem;">Paid</span>
+                                </span>
+                                <% } else if (bill.billingStatus==='PARTIAL_PAID' ) { %>
+                                    <span class="status status-orange">
+                                        <span class="status-dot"></span>
+                                        <span style="font-size: 0.8rem;">Partial Paid</span>
+                                    </span>
+                                    <% } else if (bill.customerDownloadHistory.length> 0) { %>
+                                        <span class="status status-blue">
+                                            <span class="status-dot"></span>
+                                            <span style="font-size: 0.8rem;">Email Read</span>
+                                        </span>
+                                        <% } else { %>
+                                            <span class="status status-blue">
+                                                <span class="status-dot"></span>
+                                                <span style="font-size: 0.8rem;">Email Sent</span>
+                                            </span>
+                                            <% } %>
+                                                <% if (bill.billingStatus==='CANCELLED' ) { %>
+                                                    <span class="status status-red">
+                                                        <span class="status-dot"></span>
+                                                        <span style="font-size: 0.8rem;">Canceled</span>
+                                                    </span>
+                                                    <% } %>
+                                                        <% if (bill.isRejected ) { %>
+                                                            <span class="status status-red">
+                                                                <span class="status-dot"></span>
+                                                                <span style="font-size: 0.8rem;">Rejected</span>
+                                                            </span>
+                                                            <% } %>
+                        </td>
+                        <td class="text-muted text-center">
+                            <% if (bill.excelSummaryInvoice) { %>
+                                <a href="/uploads/<%= bill.excelSummaryInvoice %>" target="_blank"
+                                    style="width: 30px; height: 30px;" class="btn btn-xs btn-white">
+                                    <div class="icon-wrapper">
+                                        <svg style="margin: auto; width: 15px; height: 15px;"
+                                            xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-cloud-download" width="10" height="10"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                            <path
+                                                d="M19 18a3.5 3.5 0 0 0 0 -7h-1a5 4.5 0 0 0 -11 -2a4.6 4.4 0 0 0 -2.1 8.4">
+                                            </path>
+                                            <path d="M12 13l0 9"></path>
+                                            <path d="M9 19l3 3l3 -3"></path>
+                                        </svg>
+                                    </div>
+                                </a>
+                                <% } else { %>
+                                    -
+                                    <% } %>
+                        </td>
+                        <td class="flex-nowrap">
+                            <% if (!bill.isRejected && bill.billingStatus !="PAID" ) { %>
+                                <button type="button" class="btn btn-danger btn-xs" data-bs-toggle="modal"
+                                    data-bs-target="#modal-reject-invoice-customer"
+                                    @click="fillInvoiceData(JSON.parse($el.getAttribute('data-item')))"
+                                    :data-item="'<%= JSON.stringify(bill) %>'">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban"
-                                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
-                                        stroke="currentColor" fill="none" stroke-linecap="round"
-                                        stroke-linejoin="round">
+                                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                        fill="none" stroke-linecap="round" stroke-linejoin="round">
                                         <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                                         <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
                                         <path d="M5.7 5.7l12.6 12.6"></path>
                                     </svg>
                                     Reject
                                 </button>
-                                <% } %>
-                    </td>
-                </tr>
-                <% } %>
-        </tbody>
-    </table>
-</div>
-
-<nav aria-label="Page navigation">
-    <div class="text-center mb-2">
-        Showing <%= startIdx %> to <%= endIdx %> of <%= totalBilling %> documents
+                                <% } else { %>
+                                    <button type="button" class="btn btn-danger btn-xs" disabled>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban"
+                                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                            stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                            <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                                            <path d="M5.7 5.7l12.6 12.6"></path>
+                                        </svg>
+                                        Reject
+                                    </button>
+                                    <% } %>
+                        </td>
+                    </tr>
+                    <% } %>
+            </tbody>
+        </table>
     </div>
-    <ul class="pagination justify-content-center">
-        <li class="page-item<%= currentPage === 1 ? ' disabled' : '' %>">
-            <a class="page-link" href="?<%= queryString %>&page=1&pageSize=<%= pageSize %>">First</a>
-        </li>
-        <li class="page-item<%= currentPage === 1 ? ' disabled' : '' %>">
-            <a class="page-link"
-                href="?<%= queryString %>&page=<%= currentPage - 1 %>&pageSize=<%= pageSize %>">Previous</a>
-        </li>
-        <li class="page-item<%= currentPage === totalPages ? ' disabled' : '' %>">
-            <a class="page-link"
-                href="?<%= queryString %>&page=<%= currentPage + 1 %>&pageSize=<%= pageSize %>">Next</a>
-        </li>
-        <li class="page-item<%= currentPage === totalPages ? ' disabled' : '' %>">
-            <a class="page-link" href="?<%= queryString %>&page=<%= totalPages %>&pageSize=<%= pageSize %>">Last</a>
-        </li>
-    </ul>
-</nav>
+
+    <nav aria-label="Page navigation">
+        <div class="text-center mb-2">
+            Showing <%= startIdx %> to <%= endIdx %> of <%= totalBilling %> documents
+        </div>
+        <ul class="pagination justify-content-center">
+            <li class="page-item<%= currentPage === 1 ? ' disabled' : '' %>">
+                <a class="page-link" href="?<%= queryString %>&page=1&pageSize=<%= pageSize %>">First</a>
+            </li>
+            <li class="page-item<%= currentPage === 1 ? ' disabled' : '' %>">
+                <a class="page-link"
+                    href="?<%= queryString %>&page=<%= currentPage - 1 %>&pageSize=<%= pageSize %>">Previous</a>
+            </li>
+            <li class="page-item<%= currentPage === totalPages ? ' disabled' : '' %>">
+                <a class="page-link"
+                    href="?<%= queryString %>&page=<%= currentPage + 1 %>&pageSize=<%= pageSize %>">Next</a>
+            </li>
+            <li class="page-item<%= currentPage === totalPages ? ' disabled' : '' %>">
+                <a class="page-link" href="?<%= queryString %>&page=<%= totalPages %>&pageSize=<%= pageSize %>">Last</a>
+            </li>
+        </ul>
+    </nav>
+
+</div>
