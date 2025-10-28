@@ -339,11 +339,9 @@ exports.rejectInvoice = async (req, res) => {
 
 exports.exports = async (req, res) => {
   const { HOST } = process.env;
-  const { reportType, queryString } = req.query;
+  const { reportType, queryString, selectedIds } = req.query;
 
   const params = new URLSearchParams(queryString);
-
-  console.log("params", params);
 
   const searchParam = {};
   params.forEach((value, key) => {
@@ -358,6 +356,13 @@ exports.exports = async (req, res) => {
   if (reportType === "CURRENT") {
     const query = buildBillingSearchQuery(searchParam);
     billings = await collection.find(query).toArray();
+  } else if (reportType === "MULTIPLE_ROW") {
+    if (!selectedIds) {
+      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
+    }
+
+    const ids = selectedIds.split(",").map((id) => new mongoose.Types.ObjectId(id.trim()));
+    billings = await collection.find({ _id: { $in: ids } }).toArray();
   } else {
     billings = await collection.find().toArray();
   }
@@ -420,8 +425,6 @@ const buildBillingSearchQuery = (params) => {
   } = params;
 
   const query = {};
-
-  console.log(accountID, "accountID", typeof accountID);
 
   if (accountID && typeof accountID == "string") {
     const accountIDArray = accountID?.split(",")?.map((item) => {
@@ -526,8 +529,6 @@ const buildBillingSearchQuery = (params) => {
       query["billingStatus"] = billingStatus; // CANCELLED Situation handled on here
     }
   }
-
-  console.log("query", query);
 
   return query;
 };

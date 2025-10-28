@@ -6,17 +6,21 @@
                     <h5 class="modal-title">Export Billing</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
+
                 <div class="modal-body">
                     <label class="form-label">Export Type</label>
+
+                    <!-- Hidden fields -->
+                    <input type="hidden" name="queryString" id="exportQueryString">
+                    <input type="hidden" name="selectedIds" id="selectedIds">
+
                     <div class="form-selectgroup-boxes row mb-3">
-                        <input type="hidden" name="queryString" id="exportQueryString">
                         <div class="col-lg-6">
                             <label class="form-selectgroup-item">
-                                <input type="radio" name="reportType" value="CURRENT" class="form-selectgroup-input" checked>
+                                <input type="radio" name="reportType" value="CURRENT"
+                                    class="form-selectgroup-input" checked>
                                 <span class="form-selectgroup-label d-flex align-items-center p-3">
-                                    <span class="me-3">
-                                        <span class="form-selectgroup-check"></span>
-                                    </span>
+                                    <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
                                         <span class="form-selectgroup-title strong mb-1">This Page</span>
                                         <span class="d-block text-muted">Only export this page ( filter applied )</span>
@@ -26,11 +30,10 @@
                         </div>
                         <div class="col-lg-6">
                             <label class="form-selectgroup-item">
-                                <input type="radio" name="reportType" value="ENTIRE" class="form-selectgroup-input">
+                                <input type="radio" name="reportType" value="ENTIRE"
+                                    class="form-selectgroup-input">
                                 <span class="form-selectgroup-label d-flex align-items-center p-3">
-                                    <span class="me-3">
-                                        <span class="form-selectgroup-check"></span>
-                                    </span>
+                                    <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
                                         <span class="form-selectgroup-title strong mb-1">Entire Records</span>
                                         <span class="d-block text-muted">Export entire records in database</span>
@@ -39,15 +42,44 @@
                             </label>
                         </div>
                     </div>
+
+                    <div class="form-selectgroup-boxes row mb-3">
+                        <div class="col-lg-6">
+                            <label class="form-selectgroup-item">
+                                <input type="radio" name="reportType" value="MULTIPLE_INVOICE"
+                                    id="exportMultipleInvoice" class="form-selectgroup-input">
+                                <span class="form-selectgroup-label d-flex align-items-center p-3">
+                                    <span class="me-3"><span class="form-selectgroup-check"></span></span>
+                                    <span class="form-selectgroup-label-content">
+                                        <span class="form-selectgroup-title strong mb-1">Multiple Selection</span>
+                                        <span class="d-block text-muted">Only Invoice</span>
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="col-lg-6">
+                            <label class="form-selectgroup-item">
+                                <input type="radio" name="reportType" value="MULTIPLE_ROW"
+                                    id="exportMultipleRow" class="form-selectgroup-input">
+                                <span class="form-selectgroup-label d-flex align-items-center p-3">
+                                    <span class="me-3"><span class="form-selectgroup-check"></span></span>
+                                    <span class="form-selectgroup-label-content">
+                                        <span class="form-selectgroup-title strong mb-1">Multiple Selection</span>
+                                        <span class="d-block text-muted">Row data</span>
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
+
                 <div class="modal-footer">
-                    <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
-                        Cancel
-                    </a>
+                    <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">Cancel</a>
                     <button type="submit" class="btn btn-primary ms-auto" data-bs-dismiss="modal">
-                        <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
-                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-database-export"
-                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                        <svg xmlns="http://www.w3.org/2000/svg"
+                            class="icon icon-tabler icon-tabler-database-export" width="24" height="24"
+                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
                             stroke-linecap="round" stroke-linejoin="round">
                             <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
                             <path d="M4 6c0 1.657 3.582 3 8 3s8 -1.343 8 -3s-3.582 -3 -8 -3s-8 1.343 -8 3"></path>
@@ -64,3 +96,70 @@
         </form>
     </div>
 </div>
+
+<script>
+document.addEventListener("DOMContentLoaded", () => {
+    const selectedIdsInput = document.getElementById("selectedIds");
+    const exportMultipleInvoice = document.getElementById("exportMultipleInvoice");
+    const exportMultipleRow = document.getElementById("exportMultipleRow");
+    const selectAll = document.getElementById("select-all");
+
+    // Read selected items from localStorage (persistent across pages)
+    function getStoredSelectedItems() {
+        try {
+            return JSON.parse(localStorage.getItem("selectedItems") || "[]");
+        } catch (e) {
+            console.error("Error parsing selectedItems:", e);
+            return [];
+        }
+    }
+
+    // Update export modal state based on stored selection
+    function updateExportState() {
+        const storedItems = getStoredSelectedItems();
+        const joinedIds = storedItems.join(",");
+
+        // Update hidden input for form submission
+        selectedIdsInput.value = joinedIds;
+
+        // Enable/disable export options
+        const hasSelection = storedItems.length > 0;
+        exportMultipleInvoice.disabled = !hasSelection;
+        exportMultipleRow.disabled = !hasSelection;
+
+        // Reset radio if no selection
+        if (!hasSelection) {
+            const selectedRadio = document.querySelector("input[name='reportType']:checked");
+            if (selectedRadio &&
+                (selectedRadio.value === "MULTIPLE_INVOICE" || selectedRadio.value === "MULTIPLE_ROW")) {
+                selectedRadio.checked = false;
+            }
+        }
+    }
+
+    // Watch for modal open to re-sync with latest localStorage
+    const modal = document.getElementById("modal-export-billing");
+    modal.addEventListener("show.bs.modal", updateExportState);
+
+    // Detect user click on disabled export options
+    [exportMultipleInvoice, exportMultipleRow].forEach(el => {
+        el.closest(".form-selectgroup-item").addEventListener("click", (e) => {
+            if (el.disabled) {
+                e.preventDefault();
+                Swal.fire({
+                    icon: "warning",
+                    title: "No Items Selected",
+                    text: "Please select at least one billing record before exporting multiple.",
+                    confirmButtonText: "OK",
+                });
+            }
+        });
+    });
+
+    // Initialize on load
+    updateExportState();
+});
+</script>
+
+
+
