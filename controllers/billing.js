@@ -49,6 +49,7 @@ exports.fetch = async (req, res) => {
       startIdx,
       endIdx,
       totalBilling,
+      clearSelected: Object.keys(req.query).length === 0,
     });
   } catch (error) {
     console.error(error);

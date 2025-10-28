@@ -292,6 +292,22 @@
                 });
             });
         </script>
+        <% if (clearSelected) { %>
+            <script>
+                console.log("Clearing selectedItems because query is empty");
+                localStorage.removeItem("selectedItems");
+
+                // Uncheck all checkboxes
+                document.querySelectorAll('.select-item').forEach(cb => cb.checked = false);
+                const selectAll = document.querySelector('#select-all');
+                if (selectAll) selectAll.checked = false;
+
+                // Reset selected count if you show it
+                const selectedText = document.querySelector('[x-text*="selectedItems.length"]');
+                if (selectedText) selectedText.innerText = '0 selected';
+            </script>
+        <% } %>
+
     </body>
 
     <%- include('partials/footer') -%>
