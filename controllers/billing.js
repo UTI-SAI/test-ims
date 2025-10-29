@@ -168,7 +168,11 @@ exports.fetchCustomerBilling = async (req, res) => {
     if (req.query.accountID) {
       query["accountID"] = { $eq: req.query.accountID };
     } else {
-      query["accountID"] = { $in: clonedUser.accountID };
+
+      if (req.user.role == 'USER') {
+        query["accountID"] = { $in: clonedUser.accountID };
+      }
+      
     }
     console.log({
       req: req.user,
