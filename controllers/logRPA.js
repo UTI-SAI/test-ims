@@ -46,7 +46,7 @@ const buildLogRPAQuery = (params) => {
     const itemsArray = clNumber?.split(',')?.map(item => {
       return { clNumber: { $regex: item.trim(), $options: "i" } };
     });
-  
+
     if (itemsArray.length > 0) {
       query.$or = itemsArray;
     }
@@ -56,7 +56,7 @@ const buildLogRPAQuery = (params) => {
     const itemsArray = invoiceNo?.split(',')?.map(item => {
       return { invoiceNumber: { $regex: item.trim(), $options: "i" } };
     });
-  
+
     if (itemsArray.length > 0) {
       query.$or = itemsArray;
     }
@@ -137,12 +137,31 @@ exports.fetch = async (req, res) => {
 };
 
 exports.cancelInvoice = async (req, res) => {
+  // Force console output
+  process.stdout.write("=== CANCEL INVOICE PROCESS STARTED ===\n");
+  console.info("=== CANCEL INVOICE PROCESS STARTED ===");
+  console.error("=== CANCEL INVOICE PROCESS STARTED (ERROR STREAM) ===");
+
   try {
     const { clNumber, cancellationReason } = req.body;
+    console.info("Request data received:", { clNumber, cancellationReason });
+
     const db = mongoose.connection;
     const collection = db.collection("logRPA");
+    console.info("Database connection established");
 
-    await collection.updateMany(
+    // Get invoice data before updating
+    const invoiceData = await collection.findOne({ clNumber: clNumber });
+    console.info("Invoice data found:", invoiceData ? "Yes" : "No");
+    if (invoiceData) {
+      console.info("Invoice details:", {
+        id: invoiceData._id,
+        status: invoiceData.status,
+        clNumber: invoiceData.clNumber
+      });
+    }
+
+    const updateResult = await collection.updateMany(
       { clNumber: clNumber },
       {
         $set: {
@@ -153,10 +172,19 @@ exports.cancelInvoice = async (req, res) => {
         },
       }
     );
+    console.info("Database update result:", {
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount
+    });
 
+    // Note: Email notification functionality has been moved to billing.js rejectInvoice function
+
+    console.info("=== CANCEL INVOICE PROCESS COMPLETED ===");
+    console.info("Redirecting to /document");
     return res.redirect("/document");
   } catch (error) {
-    console.error(error);
+    console.error("❌ CANCEL INVOICE ERROR:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).send("Server error");
   }
 };

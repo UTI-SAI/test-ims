@@ -4,6 +4,8 @@ const mongoose = require("mongoose");
 const { createQueryString } = require("../helpers/createQueryString");
 const listFilesInDirectory = require("../helpers/listFilesInDirectory");
 const createCsvWriter = require("csv-writer").createObjectCsvWriter;
+const sendEmail = require("../helpers/sendEmail");
+const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoiceEmail");
 
 exports.fetch = async (req, res) => {
   try {
@@ -305,36 +307,104 @@ exports.cancel = async (req, res) => {
 };
 
 exports.rejectInvoice = async (req, res) => {
-  const { rejectionReason, id } = req.body;
+  console.info("=== REJECT INVOICE PROCESS STARTED ===");
+  try {
+    const { rejectionReason, id } = req.body;
+    console.info("Request data received:", { rejectionReason, id });
 
-  console.log("id", id);
+    const db = mongoose.connection;
+    const collection = db.collection("billing");
+    console.info("Database connection established");
 
-  const db = mongoose.connection;
-  const collection = db.collection("billing");
-
-  await collection.updateOne(
-    { _id: new ObjectId(id) },
-    {
-      $set: {
-        isRejected: true,
-        rejectionReason: rejectionReason,
-      },
-    },
-    (err, result) => {
-      if (err) {
-        console.error("Error:", err);
-      } else {
-        console.log(
-          "Matched:",
-          result.matchedCount,
-          "Modified:",
-          result.modifiedCount
-        );
-      }
+    // Get invoice data before updating
+    const invoiceData = await collection.findOne({ _id: new ObjectId(id) });
+    console.info("Invoice data found:", invoiceData ? "Yes" : "No");
+    if (invoiceData) {
+      console.info("Invoice details:", {
+        id: invoiceData._id,
+        clNumber: invoiceData.invoice?.clnumber,
+        accountID: invoiceData.accountID
+      });
     }
-  );
 
-  return res.redirect("/customer-document");
+    const updateResult = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          isRejected: true,
+          rejectionReason: rejectionReason,
+          rejectedOn: new Date().toISOString(),
+          modifiedOn: new Date().toISOString(),
+        },
+      }
+    );
+
+    console.info("Database update result:", {
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount
+    });
+
+    // Send email notification
+    console.info("=== EMAIL NOTIFICATION PROCESS ===");
+    try {
+      if (invoiceData) {
+
+        const documentNumber = invoiceData.invoice?.clnumber || invoiceData.clnumber || 'Unknown';
+        console.info("Generated document number:", documentNumber);
+
+        // Prepare email data
+        const emailData = {
+          documentNumber: documentNumber,
+          invoices: [
+            {
+              invoiceNumber: invoiceData.invoice?.invoiceno || invoiceData.invoiceno || 'Unknown',
+              reason: rejectionReason || "No reason provided"
+            }
+          ]
+        };
+        console.info("Email data prepared:", emailData);
+
+        // Generate email HTML content
+        console.info("Generating email HTML content...");
+        const emailHtml = generateRejectInvoiceEmail(emailData);
+        console.info("Email HTML generated:", emailHtml ? "Success" : "Failed");
+
+        if (emailHtml) {
+          console.info("Email HTML content length:", emailHtml.length);
+          console.info("First 200 chars of HTML:", emailHtml.substring(0, 200) + "...");
+        }
+
+        // Send email
+        if (emailHtml) {
+          console.info("Attempting to send email to: tiar.agisti@gmail.com");
+          const emailResult = await sendEmail({
+            to: "tiar.agisti@gmail.com", // Hardcoded email for now
+            subject: `Invoice Rejected Notification - Doc ${documentNumber}`,
+            html: emailHtml,
+            text: `Invoice ${emailData.invoices[0].invoiceNumber} has been rejected. Reason: ${rejectionReason}`
+          });
+          console.info("Email send result:", emailResult);
+          console.info(`✅ Reject notification email queued for Invoice: ${emailData.invoices[0].invoiceNumber}`);
+        } else {
+          console.info("❌ Email HTML is empty, email not sent");
+        }
+      } else {
+        console.info("❌ No invoice data found, email not sent");
+      }
+    } catch (emailError) {
+      console.error("❌ Error sending reject notification email:", emailError);
+      console.error("Email error stack:", emailError.stack);
+      // Don't fail the main operation if email fails
+    }
+
+    console.info("=== REJECT INVOICE PROCESS COMPLETED ===");
+    console.info("Redirecting to /customer-document");
+    return res.redirect("/customer-document");
+  } catch (error) {
+    console.error("❌ REJECT INVOICE ERROR:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).send("Server error");
+  }
 };
 
 exports.exports = async (req, res) => {
