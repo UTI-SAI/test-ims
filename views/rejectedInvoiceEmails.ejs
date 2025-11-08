@@ -1,0 +1,264 @@
+<%- include('partials/header') -%>
+    <title>Rejected Invoice Email Settings | <%= appName %>
+    </title>
+
+    <script>
+        document.addEventListener('alpine:init', () => {
+            Alpine.data('rejectedEmailManager', () => ({
+                config: {},
+                isEditMode: false,
+                showModal: false,
+
+                // Initialize form data
+                initForm() {
+                    this.config = {
+                        _id: '',
+                        accountID: '',
+                        emails: []
+                    };
+                    this.isEditMode = false;
+                },
+
+                // Open create modal
+                openCreateModal() {
+                    this.initForm();
+                    this.showModal = true;
+                },
+
+                // Open edit modal
+                async openEditModal(id) {
+                    try {
+                        const response = await fetch(`/rejected-invoice-emails/${id}`);
+                        const result = await response.json();
+
+                        if (result.success) {
+                            this.config = result.data;
+                            this.isEditMode = true;
+                            this.showModal = true;
+                        } else {
+                            alert('Error loading configuration: ' + result.message);
+                        }
+                    } catch (error) {
+                        alert('Error loading configuration');
+                        console.error(error);
+                    }
+                },
+
+                // Submit form
+                async submitForm() {
+                    try {
+                        const emailsString = Array.isArray(this.config.emails)
+                            ? this.config.emails.join(', ')
+                            : this.config.emails;
+
+                        const formData = {
+                            accountID: this.config.accountID,
+                            emails: emailsString
+                        };
+
+                        let url, method;
+                        if (this.isEditMode) {
+                            url = `/rejected-invoice-emails/${this.config._id}`;
+                            method = 'PUT';
+                        } else {
+                            url = '/rejected-invoice-emails/create';
+                            method = 'POST';
+                        }
+
+                        const response = await fetch(url, {
+                            method: method,
+                            headers: {
+                                'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify(formData)
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            this.showModal = false;
+                            location.reload();
+                        } else {
+                            alert('Error: ' + result.message);
+                        }
+                    } catch (error) {
+                        alert('Error saving configuration');
+                        console.error(error);
+                    }
+                },
+
+                // Delete configuration
+                async deleteConfig(id, accountID) {
+                    if (confirm(`Are you sure you want to delete configuration for ${accountID}?`)) {
+                        try {
+                            const response = await fetch(`/rejected-invoice-emails/${id}`, {
+                                method: 'DELETE',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                }
+                            });
+
+                            const result = await response.json();
+
+                            if (result.success) {
+                                location.reload();
+                            } else {
+                                alert('Error: ' + result.message);
+                            }
+                        } catch (error) {
+                            alert('Error deleting configuration');
+                            console.error(error);
+                        }
+                    }
+                },
+
+                // Add email to list
+                addEmail() {
+                    if (!Array.isArray(this.config.emails)) {
+                        this.config.emails = [];
+                    }
+                    this.config.emails.push('');
+                },
+
+                // Remove email from list
+                removeEmail(index) {
+                    this.config.emails.splice(index, 1);
+                }
+            }));
+        });
+    </script>
+
+    <body x-data="rejectedEmailManager">
+        <script src="/dist/js/demo-theme.min.js?1684106062"></script>
+        <div class="page">
+            <!-- Sidebar -->
+            <%- include('partials/sidebar') -%>
+
+                <div class="page-wrapper">
+                    <!-- Page header -->
+                    <div class="page-header d-print-none">
+                        <div class="container-xl">
+                            <div class="row g-2 align-items-center">
+                                <div class="col">
+                                    <div class="page-pretitle">Settings</div>
+                                    <h2 class="page-title">Rejected Invoice Email Settings</h2>
+                                </div>
+                                <div class="col-auto ms-auto d-print-none">
+                                    <div class="btn-list">
+                                        <button class="btn btn-primary" @click="openCreateModal()">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                <line x1="12" y1="5" x2="12" y2="19" />
+                                                <line x1="5" y1="12" x2="19" y2="12" />
+                                            </svg>
+                                            Add Configuration
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Page body -->
+                    <div class="page-body">
+                        <div class="container-xl">
+                            <!-- Filter Section -->
+                            <%- include('fieldset/filterRejectedEmails') -%>
+
+                                <div class="row row-cards">
+                                    <div class="col-12">
+                                        <div class="card">
+                                            <div class="card-header">
+                                                <h3 class="card-title">Email Configurations</h3>
+                                            </div>
+
+                                            <!-- Table -->
+                                            <%- include('tables/rejectedInvoiceEmails') -%>
+                                        </div>
+                                    </div>
+                                </div>
+                        </div>
+                    </div>
+                </div>
+        </div>
+
+        <!-- Modal for Create/Edit -->
+        <div class="modal modal-blur fade" :class="{ 'show': showModal }"
+            :style="{ display: showModal ? 'block' : 'none' }" tabindex="-1" role="dialog" aria-hidden="true">
+            <div class="modal-dialog modal-lg" role="document">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" x-text="isEditMode ? 'Edit Configuration' : 'Add Configuration'"></h5>
+                        <button type="button" class="btn-close" @click="showModal = false" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Account ID</label>
+                                    <input type="text" class="form-control" x-model="config.accountID"
+                                        placeholder="Enter Account ID (e.g., JS10ATRAN)" required>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-12">
+                                <div class="mb-3">
+                                    <label class="form-label">Email Addresses</label>
+                                    <div class="space-y-2">
+                                        <template x-for="(email, index) in config.emails" :key="index">
+                                            <div class="input-group">
+                                                <input type="email" class="form-control" x-model="config.emails[index]"
+                                                    placeholder="Enter email address" required>
+                                                <button class="btn btn-outline-danger" type="button"
+                                                    @click="removeEmail(index)" x-show="config.emails.length > 1">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
+                                                        height="24" viewBox="0 0 24 24" stroke-width="2"
+                                                        stroke="currentColor" fill="none" stroke-linecap="round"
+                                                        stroke-linejoin="round">
+                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                        <line x1="18" y1="6" x2="6" y2="18" />
+                                                        <line x1="6" y1="6" x2="18" y2="18" />
+                                                    </svg>
+                                                </button>
+                                            </div>
+                                        </template>
+                                    </div>
+                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2"
+                                        @click="addEmail()">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <line x1="12" y1="5" x2="12" y2="19" />
+                                            <line x1="5" y1="12" x2="19" y2="12" />
+                                        </svg>
+                                        Add Email
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-link link-secondary" @click="showModal = false">
+                            Cancel
+                        </button>
+                        <button type="button" class="btn btn-primary ms-auto" @click="submitForm()">
+                            <span x-text="isEditMode ? 'Update' : 'Create'"></span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Backdrop -->
+        <div class="modal-backdrop fade" :class="{ 'show': showModal }"
+            :style="{ display: showModal ? 'block' : 'none' }" @click="showModal = false"></div>
+
+        <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    </body>
+
+    <%- include('partials/footer') -%>
