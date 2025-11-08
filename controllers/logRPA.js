@@ -3,6 +3,8 @@ const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
 const { createQueryString } = require("../helpers/createQueryString");
 const createCsvWriter = require("csv-writer").createObjectCsvWriter;
+const sendEmail = require("../helpers/sendEmail");
+const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoiceEmail");
 
 const buildLogRPAQuery = (params) => {
   const {
@@ -46,7 +48,7 @@ const buildLogRPAQuery = (params) => {
     const itemsArray = clNumber?.split(',')?.map(item => {
       return { clNumber: { $regex: item.trim(), $options: "i" } };
     });
-  
+
     if (itemsArray.length > 0) {
       query.$or = itemsArray;
     }
@@ -56,7 +58,7 @@ const buildLogRPAQuery = (params) => {
     const itemsArray = invoiceNo?.split(',')?.map(item => {
       return { invoiceNumber: { $regex: item.trim(), $options: "i" } };
     });
-  
+
     if (itemsArray.length > 0) {
       query.$or = itemsArray;
     }
@@ -142,6 +144,9 @@ exports.cancelInvoice = async (req, res) => {
     const db = mongoose.connection;
     const collection = db.collection("logRPA");
 
+    // Get invoice data before updating
+    const invoiceData = await collection.findOne({ clNumber: clNumber });
+
     await collection.updateMany(
       { clNumber: clNumber },
       {
@@ -153,6 +158,44 @@ exports.cancelInvoice = async (req, res) => {
         },
       }
     );
+
+    // Send email notification
+    try {
+      // Generate document number (format: ddMmmyyyy + sequence, e.g. "24Feb01326")
+      const now = new Date();
+      const dateString = moment(now).format("DDMMMYYYY").replace(/^0/, ''); // Remove leading zero from day
+      const sequence = Math.floor(Math.random() * 100000).toString().padStart(5, '0'); // Generate 5-digit sequence
+      const documentNumber = dateString + sequence;
+
+      // Prepare email data
+      const emailData = {
+        documentNumber: documentNumber,
+        invoices: [
+          {
+            clNumber: clNumber,
+            reason: cancellationReason || "No reason provided"
+          }
+        ]
+      };
+
+      // Generate email HTML content
+      const emailHtml = generateRejectInvoiceEmail(emailData);
+
+      // Send email
+      if (emailHtml) {
+        await sendEmail({
+          to: "tiar.agisti@gmail.com", // Hardcoded email for now
+          subject: `Invoice Rejected Notification - Doc ${documentNumber}`,
+          html: emailHtml,
+          text: `Invoice ${clNumber} has been rejected. Reason: ${cancellationReason}`
+        });
+
+        console.log(`Reject notification email sent for CL Number: ${clNumber}`);
+      }
+    } catch (emailError) {
+      console.error("Error sending reject notification email:", emailError);
+      // Don't fail the main operation if email fails
+    }
 
     return res.redirect("/document");
   } catch (error) {
