@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background-color: #f4f4f4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            background-color: #fff;
+            border-radius: 8px;
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        p {
+            color: #666;
+            line-height: 1.6;
+            margin: 10px 0;
+        }
+
+        .greeting {
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+        }
+
+        .invoice-list {
+            background-color: #f9f9f9;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+
+        .invoice-item {
+            margin: 8px 0;
+            color: #555;
+            font-size: 14px;
+        }
+
+        .invoice-number {
+            font-weight: bold;
+            color: #d73527;
+        }
+
+        .reason {
+            color: #d73527;
+            font-weight: bold;
+        }
+
+        .doc-reference {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-left: 4px solid #007bff;
+            margin: 15px 0;
+            font-weight: bold;
+            color: #495057;
+        }
+
+        .signature {
+            margin-top: 30px;
+            color: #666;
+        }
+
+        .signature-line {
+            margin: 5px 0;
+        }
+
+        .rejected-text {
+            color: #d73527;
+            font-weight: bold;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <p class="greeting">Dengan hormat,</p>
+
+        <p>Berikut <span class="rejected-text">Invoice yang direjected by customer</span>.</p>
+
+        <div class="doc-reference">
+            Doc {DOCUMENT_NUMBER} :
+        </div>
+
+        <div class="invoice-list">
+            {INVOICE_LIST}
+        </div>
+
+        <div class="signature">
+            <p class="signature-line">Best Regards,</p>
+            <p class="signature-line">IMS System</p>
+        </div>
+    </div>
+</body>
+
+</html>
