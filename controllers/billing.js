@@ -348,11 +348,8 @@ exports.rejectInvoice = async (req, res) => {
     console.info("=== EMAIL NOTIFICATION PROCESS ===");
     try {
       if (invoiceData) {
-        // Generate document number (format: ddMmmyyyy + sequence, e.g. "24Feb01326")
-        const now = new Date();
-        const dateString = moment(now).format("DDMMMYYYY").replace(/^0/, ''); // Remove leading zero from day
-        const sequence = Math.floor(Math.random() * 100000).toString().padStart(5, '0'); // Generate 5-digit sequence
-        const documentNumber = dateString + sequence;
+
+        const documentNumber = invoiceData.invoice?.clnumber || invoiceData.clnumber || 'Unknown';
         console.info("Generated document number:", documentNumber);
 
         // Prepare email data
@@ -360,7 +357,7 @@ exports.rejectInvoice = async (req, res) => {
           documentNumber: documentNumber,
           invoices: [
             {
-              clNumber: invoiceData.invoice?.clnumber || invoiceData.clnumber || 'Unknown',
+              invoiceNumber: invoiceData.invoice?.invoiceno || invoiceData.invoiceno || 'Unknown',
               reason: rejectionReason || "No reason provided"
             }
           ]
@@ -384,10 +381,10 @@ exports.rejectInvoice = async (req, res) => {
             to: "tiar.agisti@gmail.com", // Hardcoded email for now
             subject: `Invoice Rejected Notification - Doc ${documentNumber}`,
             html: emailHtml,
-            text: `Invoice ${emailData.invoices[0].clNumber} has been rejected. Reason: ${rejectionReason}`
+            text: `Invoice ${emailData.invoices[0].invoiceNumber} has been rejected. Reason: ${rejectionReason}`
           });
           console.info("Email send result:", emailResult);
-          console.info(`✅ Reject notification email queued for Invoice: ${emailData.invoices[0].clNumber}`);
+          console.info(`✅ Reject notification email queued for Invoice: ${emailData.invoices[0].invoiceNumber}`);
         } else {
           console.info("❌ Email HTML is empty, email not sent");
         }
