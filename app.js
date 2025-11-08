@@ -56,14 +56,14 @@ app.use((req, res, next) => {
   if (req.method === 'POST') {
     logger.info(`POST Payload: ${JSON.stringify(req.body)}`);
   }
-  
+
   const originalSend = res.send;
-  
+
   res.send = function (body) {
     logger.info(`Response: ${body}`);
     originalSend.call(this, body);
   };
-  
+
   next();
 });
 
@@ -107,7 +107,7 @@ mongoose
   })
   .then(() => {
     console.log("MongoDB connected")
-    
+
     // start add task queue
     queueManager();
   })
@@ -125,12 +125,14 @@ const usersRoutes = require("./routes/users");
 const logRPARoutes = require("./routes/logRPA");
 const billingRoutes = require("./routes/billing");
 const apiRoutes = require("./routes/api");
+const rejectedInvoiceEmailRoutes = require("./routes/rejectedInvoiceEmail");
 const { queueManager } = require("./helpers/emailQueue");
 app.use("/auth", authRoutes);
 app.use("/", dashboardRoutes);
 app.use("/logs", logRPARoutes);
 app.use("/billing", billingRoutes);
 app.use("/users", usersRoutes);
+app.use("/rejected-invoice-emails", rejectedInvoiceEmailRoutes);
 
 // API
 app.use("/api", apiRoutes);
