@@ -11,6 +11,11 @@
             z-index: 1000;
             /* Ensure it's above other elements */
         }
+
+        .row-cancelled {
+            background-color: rgba(250, 128, 114, 0.1);
+        }
+
     </style>
 
     <script>
@@ -224,6 +229,85 @@
                 },
             });
         </script>
+        <script>
+            document.addEventListener("DOMContentLoaded", () => {
+                const SELECTED_KEY = "selectedItems";
+
+                // Function to clear localStorage, uncheck boxes, and reset Alpine data
+                function clearSelectedItems() {
+                    localStorage.removeItem(SELECTED_KEY);
+                    console.log("Cleared selectedItems from localStorage");
+
+                    // Uncheck all checkboxes
+                    document.querySelectorAll('.select-item').forEach(cb => cb.checked = false);
+                    const selectAll = document.querySelector('#select-all');
+                    if (selectAll) selectAll.checked = false;
+
+                    // Reset Alpine.js data (if exists)
+                    if (window.Alpine && Alpine.store) {
+                        try {
+                            const tableComponent = document.querySelector('[x-data]');
+                            if (tableComponent && tableComponent.__x) {
+                                tableComponent.__x.$data.selectedItems = [];
+                            }
+                        } catch (e) {
+                            console.warn("Alpine reset skipped:", e);
+                        }
+                    }
+
+                    // Update text showing selected count (if exists)
+                    const selectedText = document.querySelector('[x-text*="selectedItems.length"]');
+                    if (selectedText) selectedText.innerText = `0 selected`;
+                }
+
+                // When Filter button (submit form)
+                const billingForm = document.querySelector('form[action="/billing"][method="get"]');
+                if (billingForm) {
+                    billingForm.addEventListener("submit", () => {
+                        clearSelectedItems();
+                    });
+                }
+
+                // When Clear link is clicked
+                const clearLink = document.querySelector('a[href="/billing"]');
+                if (clearLink) {
+                    clearLink.addEventListener("click", () => {
+                        clearSelectedItems();
+                    });
+                }
+
+                // Also when Export Billing form is submitted (if exists)
+                const exportForm = document.querySelector("#modal-export-billing form");
+                if (exportForm) {
+                    exportForm.addEventListener("submit", () => {
+                        clearSelectedItems();
+                    });
+                }
+
+                // Automatically clear when user leaves /billing page
+                window.addEventListener("beforeunload", () => {
+                    if (!window.location.pathname.startsWith("/billing")) {
+                        clearSelectedItems();
+                    }
+                });
+            });
+        </script>
+        <% if (clearSelected) { %>
+            <script>
+                console.log("Clearing selectedItems because query is empty");
+                localStorage.removeItem("selectedItems");
+
+                // Uncheck all checkboxes
+                document.querySelectorAll('.select-item').forEach(cb => cb.checked = false);
+                const selectAll = document.querySelector('#select-all');
+                if (selectAll) selectAll.checked = false;
+
+                // Reset selected count if you show it
+                const selectedText = document.querySelector('[x-text*="selectedItems.length"]');
+                if (selectedText) selectedText.innerText = '0 selected';
+            </script>
+        <% } %>
+
     </body>
 
     <%- include('partials/footer') -%>

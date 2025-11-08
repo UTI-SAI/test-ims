@@ -35,7 +35,7 @@ router.get(
 // Customer Billing
 router.get(
   "/customer-document",
-  ensureRoles(ROLES.USER),
+  ensureRoles(ROLES.USER, ROLES.SUPER_ADMIN, ROLES.ADMIN),
   billingController.fetchCustomerBilling
 );
 
