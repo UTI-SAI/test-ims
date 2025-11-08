@@ -1,0 +1,63 @@
+<form action="/rejected-invoice-emails" method="get">
+    <div class="card">
+        <div class="card-header">
+            <h3 class="card-title">Filter Configurations</h3>
+        </div>
+        <div class="card-body">
+            <div class="row">
+                <div class="col-sm-6 col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Account ID</label>
+                        <input type="text" class="form-control" name="accountID" placeholder="Search by Account ID"
+                            value="<%= typeof query !== 'undefined' && query.accountID ? query.accountID : '' %>">
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Email</label>
+                        <input type="text" class="form-control" name="email" placeholder="Search by Email"
+                            value="<%= typeof query !== 'undefined' && query.email ? query.email : '' %>">
+                    </div>
+                </div>
+                <div class="col-sm-6 col-md-4">
+                    <div class="mb-3">
+                        <label class="form-label">Page Size</label>
+                        <select class="form-select" name="pageSize">
+                            <option value="10" <%=typeof query !=='undefined' && query.pageSize=='10' ? 'selected' : ''
+                                %>>10</option>
+                            <option value="25" <%=typeof query !=='undefined' && query.pageSize=='25' ? 'selected' : ''
+                                %>>25</option>
+                            <option value="50" <%=typeof query !=='undefined' && query.pageSize=='50' ? 'selected' : ''
+                                %>>50</option>
+                            <option value="100" <%=typeof query !=='undefined' && query.pageSize=='100' ? 'selected'
+                                : '' %>>100</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="btn-list">
+                <button type="submit" class="btn btn-primary">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <circle cx="10" cy="10" r="7" />
+                        <path d="M21 21l-6 -6" />
+                    </svg>
+                    Search
+                </button>
+                <a href="/rejected-invoice-emails" class="btn">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24" viewBox="0 0 24 24"
+                        stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                        <path d="M3 12l6 -6l6 6l6 -6" />
+                    </svg>
+                    Reset
+                </a>
+            </div>
+        </div>
+    </div>
+</form>
