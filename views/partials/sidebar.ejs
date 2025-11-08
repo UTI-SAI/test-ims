@@ -11,108 +11,147 @@
         </h1>
         <div class="collapse navbar-collapse" id="sidebar-menu">
             <ul class="navbar-nav pt-lg-3">
-                <% if (user.role != 'USER') { %>
-                <li class="nav-item">
-                    <a class="nav-link" href="./">
-                        <span class="nav-link-icon d-md-none d-lg-inline-block">
-                            <!-- Download SVG icon from http://tabler-icons.io/i/home -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-device-desktop"
-                                width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-                                fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                <path
-                                    d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z">
-                                </path>
-                                <path d="M7 20h10"></path>
-                                <path d="M9 16v4"></path>
-                                <path d="M15 16v4"></path>
-                            </svg>
-                        </span>
-                        <span class="nav-link-title">
-                            Billing Monitoring
-                        </span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/customer-document">
-                        <span class="nav-link-icon d-md-none d-lg-inline-block">
-                            <!-- Download SVG icon from http://tabler-icons.io/i/home -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-device-desktop"
-                                width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-                                fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                <path
-                                    d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z">
-                                </path>
-                                <path d="M7 20h10"></path>
-                                <path d="M9 16v4"></path>
-                                <path d="M15 16v4"></path>
-                            </svg>
-                        </span>
-                        <span class="nav-link-title">
-                            Customer Monitoring
-                        </span>
-                    </a>
-                </li>
-                <% } %>
-                <li class="nav-item">
-                    <a class="nav-link" href="<% if (user.role == 'USER') { %> /customer-document <% } else { %> /document <% } %>">
-                        <span class="nav-link-icon d-md-none d-lg-inline-block">
-                            <!-- Download SVG icon from http://tabler-icons.io/i/home -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-book-2"
-                                width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-                                fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                <path d="M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12z"></path>
-                                <path d="M19 16h-12a2 2 0 0 0 -2 2"></path>
-                                <path d="M9 8h6"></path>
-                            </svg>
-                        </span>
-                        <span class="nav-link-title">
-                            <% if (user.role == 'USER') { %> Customer Monitoring <% } else { %> Available Document <% } %>
-                        </span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link"
-                        href="<% if (user.role == 'SUPER_ADMIN') { %> /users <% } else { %> /me <% } %>">
-                        <span class="nav-link-icon d-md-none d-lg-inline-block">
-                            <!-- Download SVG icon from http://tabler-icons.io/i/home -->
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-user-cog"
-                                width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
-                                fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"></path>
-                                <path d="M6 21v-2a4 4 0 0 1 4 -4h2.5"></path>
-                                <path d="M19.001 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
-                                <path d="M19.001 15.5v1.5"></path>
-                                <path d="M19.001 21v1.5"></path>
-                                <path d="M22.032 17.25l-1.299 .75"></path>
-                                <path d="M17.27 20l-1.3 .75"></path>
-                                <path d="M15.97 17.25l1.3 .75"></path>
-                                <path d="M20.733 20l1.3 .75"></path>
-                            </svg>
-                        </span>
-                        <span class="nav-link-title">
-                            <% if (user.role == 'SUPER_ADMIN') { %> Management Users <% } else { %> Preference <% } %>
-                        </span>
-                    </a>
-                </li>
-                <li class="nav-item">
-                    <a class="nav-link" href="/auth/logout">
-                        <span class="nav-link-icon d-md-none d-lg-inline-block text-danger">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-logout-2" width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none" stroke-linecap="round" stroke-linejoin="round">
-                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                <path d="M10 8v-2a2 2 0 0 1 2 -2h7a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-7a2 2 0 0 1 -2 -2v-2"></path>
-                                <path d="M15 12h-12l3 -3"></path>
-                                <path d="M6 15l-3 -3"></path>
-                             </svg>
-                        </span>
-                        <span class="nav-link-title text-danger">
-                            Logout
-                        </span>
-                    </a>
-                </li>
+                <% if (user.role !='USER' ) { %>
+                    <li class="nav-item">
+                        <a class="nav-link" href="./">
+                            <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                <!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="icon icon-tabler icon-tabler-device-desktop" width="24" height="24"
+                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path
+                                        d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z">
+                                    </path>
+                                    <path d="M7 20h10"></path>
+                                    <path d="M9 16v4"></path>
+                                    <path d="M15 16v4"></path>
+                                </svg>
+                            </span>
+                            <span class="nav-link-title">
+                                Billing Monitoring
+                            </span>
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/customer-document">
+                            <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                <!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                <svg xmlns="http://www.w3.org/2000/svg"
+                                    class="icon icon-tabler icon-tabler-device-desktop" width="24" height="24"
+                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path
+                                        d="M3 5a1 1 0 0 1 1 -1h16a1 1 0 0 1 1 1v10a1 1 0 0 1 -1 1h-16a1 1 0 0 1 -1 -1v-10z">
+                                    </path>
+                                    <path d="M7 20h10"></path>
+                                    <path d="M9 16v4"></path>
+                                    <path d="M15 16v4"></path>
+                                </svg>
+                            </span>
+                            <span class="nav-link-title">
+                                Customer Monitoring
+                            </span>
+                        </a>
+                    </li>
+                    <% } %>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                                href="<% if (user.role == 'USER') { %> /customer-document <% } else { %> /document <% } %>">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-book-2"
+                                        width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
+                                        stroke="currentColor" fill="none" stroke-linecap="round"
+                                        stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M19 4v16h-12a2 2 0 0 1 -2 -2v-12a2 2 0 0 1 2 -2h12z"></path>
+                                        <path d="M19 16h-12a2 2 0 0 0 -2 2"></path>
+                                        <path d="M9 8h6"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    <% if (user.role=='USER' ) { %> Customer Monitoring <% } else { %> Available
+                                            Document <% } %>
+                                </span>
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link"
+                                href="<% if (user.role == 'SUPER_ADMIN') { %> /users <% } else { %> /me <% } %>">
+                                <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                    <!-- Download SVG icon from http://tabler-icons.io/i/home -->
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                        class="icon icon-tabler icon-tabler-user-cog" width="24" height="24"
+                                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                        stroke-linecap="round" stroke-linejoin="round">
+                                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                        <path d="M8 7a4 4 0 1 0 8 0a4 4 0 0 0 -8 0"></path>
+                                        <path d="M6 21v-2a4 4 0 0 1 4 -4h2.5"></path>
+                                        <path d="M19.001 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                        <path d="M19.001 15.5v1.5"></path>
+                                        <path d="M19.001 21v1.5"></path>
+                                        <path d="M22.032 17.25l-1.299 .75"></path>
+                                        <path d="M17.27 20l-1.3 .75"></path>
+                                        <path d="M15.97 17.25l1.3 .75"></path>
+                                        <path d="M20.733 20l1.3 .75"></path>
+                                    </svg>
+                                </span>
+                                <span class="nav-link-title">
+                                    <% if (user.role=='SUPER_ADMIN' ) { %> Management Users <% } else { %> Preference <%
+                                                } %>
+                                </span>
+                            </a>
+                        </li>
+                        <% if (user.role=='SUPER_ADMIN' ) { %>
+                            <li class="nav-item">
+                                <a class="nav-link" href="/rejected-invoice-emails">
+                                    <span class="nav-link-icon d-md-none d-lg-inline-block">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-mail-cog" width="24" height="24"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                            <path d="M12 19h-7a2 2 0 0 1 -2 -2v-10a2 2 0 0 1 2 -2h14a2 2 0 0 1 2 2v5.5">
+                                            </path>
+                                            <path d="M3 7l9 6l9 -6"></path>
+                                            <path d="M19.001 19m-2 0a2 2 0 1 0 4 0a2 2 0 1 0 -4 0"></path>
+                                            <path d="M19.001 15.5v1.5"></path>
+                                            <path d="M19.001 21v1.5"></path>
+                                            <path d="M22.032 17.25l-1.299 .75"></path>
+                                            <path d="M17.27 20l-1.3 .75"></path>
+                                            <path d="M15.97 17.25l1.3 .75"></path>
+                                            <path d="M20.733 20l1.3 .75"></path>
+                                        </svg>
+                                    </span>
+                                    <span class="nav-link-title">
+                                        Email Settings
+                                    </span>
+                                </a>
+                            </li>
+                            <% } %>
+                                <li class="nav-item">
+                                    <a class="nav-link" href="/auth/logout">
+                                        <span class="nav-link-icon d-md-none d-lg-inline-block text-danger">
+                                            <svg xmlns="http://www.w3.org/2000/svg"
+                                                class="icon icon-tabler icon-tabler-logout-2" width="24" height="24"
+                                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                <path
+                                                    d="M10 8v-2a2 2 0 0 1 2 -2h7a2 2 0 0 1 2 2v12a2 2 0 0 1 -2 2h-7a2 2 0 0 1 -2 -2v-2">
+                                                </path>
+                                                <path d="M15 12h-12l3 -3"></path>
+                                                <path d="M6 15l-3 -3"></path>
+                                            </svg>
+                                        </span>
+                                        <span class="nav-link-title text-danger">
+                                            Logout
+                                        </span>
+                                    </a>
+                                </li>
             </ul>
         </div>
     </div>
