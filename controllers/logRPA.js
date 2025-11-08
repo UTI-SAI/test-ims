@@ -3,8 +3,6 @@ const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
 const { createQueryString } = require("../helpers/createQueryString");
 const createCsvWriter = require("csv-writer").createObjectCsvWriter;
-const sendEmail = require("../helpers/sendEmail");
-const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoiceEmail");
 
 const buildLogRPAQuery = (params) => {
   const {
@@ -139,15 +137,31 @@ exports.fetch = async (req, res) => {
 };
 
 exports.cancelInvoice = async (req, res) => {
+  // Force console output
+  process.stdout.write("=== CANCEL INVOICE PROCESS STARTED ===\n");
+  console.info("=== CANCEL INVOICE PROCESS STARTED ===");
+  console.error("=== CANCEL INVOICE PROCESS STARTED (ERROR STREAM) ===");
+
   try {
     const { clNumber, cancellationReason } = req.body;
+    console.info("Request data received:", { clNumber, cancellationReason });
+
     const db = mongoose.connection;
     const collection = db.collection("logRPA");
+    console.info("Database connection established");
 
     // Get invoice data before updating
     const invoiceData = await collection.findOne({ clNumber: clNumber });
+    console.info("Invoice data found:", invoiceData ? "Yes" : "No");
+    if (invoiceData) {
+      console.info("Invoice details:", {
+        id: invoiceData._id,
+        status: invoiceData.status,
+        clNumber: invoiceData.clNumber
+      });
+    }
 
-    await collection.updateMany(
+    const updateResult = await collection.updateMany(
       { clNumber: clNumber },
       {
         $set: {
@@ -158,48 +172,19 @@ exports.cancelInvoice = async (req, res) => {
         },
       }
     );
+    console.info("Database update result:", {
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount
+    });
 
-    // Send email notification
-    try {
-      // Generate document number (format: ddMmmyyyy + sequence, e.g. "24Feb01326")
-      const now = new Date();
-      const dateString = moment(now).format("DDMMMYYYY").replace(/^0/, ''); // Remove leading zero from day
-      const sequence = Math.floor(Math.random() * 100000).toString().padStart(5, '0'); // Generate 5-digit sequence
-      const documentNumber = dateString + sequence;
+    // Note: Email notification functionality has been moved to billing.js rejectInvoice function
 
-      // Prepare email data
-      const emailData = {
-        documentNumber: documentNumber,
-        invoices: [
-          {
-            clNumber: clNumber,
-            reason: cancellationReason || "No reason provided"
-          }
-        ]
-      };
-
-      // Generate email HTML content
-      const emailHtml = generateRejectInvoiceEmail(emailData);
-
-      // Send email
-      if (emailHtml) {
-        await sendEmail({
-          to: "tiar.agisti@gmail.com", // Hardcoded email for now
-          subject: `Invoice Rejected Notification - Doc ${documentNumber}`,
-          html: emailHtml,
-          text: `Invoice ${clNumber} has been rejected. Reason: ${cancellationReason}`
-        });
-
-        console.log(`Reject notification email sent for CL Number: ${clNumber}`);
-      }
-    } catch (emailError) {
-      console.error("Error sending reject notification email:", emailError);
-      // Don't fail the main operation if email fails
-    }
-
+    console.info("=== CANCEL INVOICE PROCESS COMPLETED ===");
+    console.info("Redirecting to /document");
     return res.redirect("/document");
   } catch (error) {
-    console.error(error);
+    console.error("❌ CANCEL INVOICE ERROR:", error);
+    console.error("Error stack:", error.stack);
     res.status(500).send("Server error");
   }
 };
