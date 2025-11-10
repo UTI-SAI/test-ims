@@ -14,7 +14,11 @@
                     this.config = {
                         _id: '',
                         accountID: '',
-                        emails: []
+                        email_main_pic: '',
+                        email_comm: '',
+                        email_comm_manager: '',
+                        email_milist_com: '',
+                        email_finance: ''
                     };
                     this.isEditMode = false;
                 },
@@ -47,13 +51,13 @@
                 // Submit form
                 async submitForm() {
                     try {
-                        const emailsString = Array.isArray(this.config.emails)
-                            ? this.config.emails.join(', ')
-                            : this.config.emails;
-
                         const formData = {
                             accountID: this.config.accountID,
-                            emails: emailsString
+                            email_main_pic: this.config.email_main_pic,
+                            email_comm: this.config.email_comm,
+                            email_comm_manager: this.config.email_comm_manager,
+                            email_milist_com: this.config.email_milist_com,
+                            email_finance: this.config.email_finance
                         };
 
                         let url, method;
@@ -112,18 +116,7 @@
                     }
                 },
 
-                // Add email to list
-                addEmail() {
-                    if (!Array.isArray(this.config.emails)) {
-                        this.config.emails = [];
-                    }
-                    this.config.emails.push('');
-                },
 
-                // Remove email from list
-                removeEmail(index) {
-                    this.config.emails.splice(index, 1);
-                }
             }));
         });
     </script>
@@ -205,39 +198,46 @@
                         </div>
 
                         <div class="row">
-                            <div class="col-lg-12">
+                            <div class="col-lg-6">
                                 <div class="mb-3">
-                                    <label class="form-label">Email Addresses</label>
-                                    <div class="space-y-2">
-                                        <template x-for="(email, index) in config.emails" :key="index">
-                                            <div class="input-group">
-                                                <input type="email" class="form-control" x-model="config.emails[index]"
-                                                    placeholder="Enter email address" required>
-                                                <button class="btn btn-outline-danger" type="button"
-                                                    @click="removeEmail(index)" x-show="config.emails.length > 1">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24"
-                                                        height="24" viewBox="0 0 24 24" stroke-width="2"
-                                                        stroke="currentColor" fill="none" stroke-linecap="round"
-                                                        stroke-linejoin="round">
-                                                        <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                                        <line x1="18" y1="6" x2="6" y2="18" />
-                                                        <line x1="6" y1="6" x2="18" y2="18" />
-                                                    </svg>
-                                                </button>
-                                            </div>
-                                        </template>
-                                    </div>
-                                    <button type="button" class="btn btn-outline-primary btn-sm mt-2"
-                                        @click="addEmail()">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="24" height="24"
-                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <line x1="12" y1="5" x2="12" y2="19" />
-                                            <line x1="5" y1="12" x2="19" y2="12" />
-                                        </svg>
-                                        Add Email
-                                    </button>
+                                    <label class="form-label">Main PIC Email <span
+                                            class="text-muted">(TO)</span></label>
+                                    <input type="email" class="form-control" x-model="config.email_main_pic"
+                                        placeholder="Enter main PIC email address">
+                                </div>
+                            </div>
+                            <div class="col-lg-6">
+                                <div class="mb-3">
+                                    <label class="form-label">Communication Email <span
+                                            class="text-muted">(TO)</span></label>
+                                    <input type="email" class="form-control" x-model="config.email_comm"
+                                        placeholder="Enter communication email address">
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="row">
+                            <div class="col-lg-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Communication Manager <span
+                                            class="text-muted">(CC)</span></label>
+                                    <input type="email" class="form-control" x-model="config.email_comm_manager"
+                                        placeholder="Enter comm manager email">
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Mailing List Communication <span
+                                            class="text-muted">(CC)</span></label>
+                                    <input type="email" class="form-control" x-model="config.email_milist_com"
+                                        placeholder="Enter mailing list email">
+                                </div>
+                            </div>
+                            <div class="col-lg-4">
+                                <div class="mb-3">
+                                    <label class="form-label">Finance Email <span class="text-muted">(CC)</span></label>
+                                    <input type="email" class="form-control" x-model="config.email_finance"
+                                        placeholder="Enter finance email address">
                                 </div>
                             </div>
                         </div>
