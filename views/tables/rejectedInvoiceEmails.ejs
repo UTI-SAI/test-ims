@@ -3,7 +3,8 @@
         <thead>
             <tr>
                 <th class="text-center">Account ID</th>
-                <th class="text-center">Email Addresses</th>
+                <th class="text-center">TO Emails</th>
+                <th class="text-center">CC Emails</th>
                 <th class="text-center">Created Date</th>
                 <th class="text-center">Updated Date</th>
                 <th class="w-1 text-center">Actions</th>
@@ -19,25 +20,85 @@
                             </strong>
                         </td>
                         <td>
-                            <% if (config.emails && config.emails.length> 0) { %>
-                                <div class="space-y-1">
-                                    <% config.emails.forEach(email=> { %>
-                                        <div class="badge bg-blue-lt">
-                                            <svg xmlns="http://www.w3.org/2000/svg"
-                                                class="icon icon-tabler icon-tabler-mail" width="16" height="16"
-                                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                                                stroke-linecap="round" stroke-linejoin="round">
-                                                <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                                <rect x="3" y="5" width="18" height="14" rx="2"></rect>
-                                                <polyline points="3,7 12,13 21,7"></polyline>
-                                            </svg>
-                                            <%= email %>
-                                        </div>
-                                        <% }); %>
-                                </div>
-                                <% } else { %>
-                                    <span class="text-muted">No emails</span>
+                            <div class="space-y-1">
+                                <% if (config.email_main_pic) { %>
+                                    <div class="badge bg-blue-lt">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-mail" width="16" height="16"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                                            <polyline points="3,7 12,13 21,7"></polyline>
+                                        </svg>
+                                        <%= config.email_main_pic %> <small>(Main PIC)</small>
+                                    </div>
                                     <% } %>
+                                        <% if (config.email_comm) { %>
+                                            <div class="badge bg-green-lt">
+                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                    class="icon icon-tabler icon-tabler-mail" width="16" height="16"
+                                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                    <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                                                    <polyline points="3,7 12,13 21,7"></polyline>
+                                                </svg>
+                                                <%= config.email_comm %> <small>(Communication)</small>
+                                            </div>
+                                            <% } %>
+                                                <% if (!config.email_main_pic && !config.email_comm) { %>
+                                                    <span class="text-muted">No TO emails</span>
+                                                    <% } %>
+                            </div>
+                        </td>
+                        <td>
+                            <div class="space-y-1">
+                                <% if (config.email_comm_manager) { %>
+                                    <div class="badge bg-orange-lt">
+                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                            class="icon icon-tabler icon-tabler-mail" width="16" height="16"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                                            <polyline points="3,7 12,13 21,7"></polyline>
+                                        </svg>
+                                        <%= config.email_comm_manager %> <small>(Manager)</small>
+                                    </div>
+                                    <% } %>
+                                        <% if (config.email_milist_com) { %>
+                                            <div class="badge bg-purple-lt">
+                                                <svg xmlns="http://www.w3.org/2000/svg"
+                                                    class="icon icon-tabler icon-tabler-mail" width="16" height="16"
+                                                    viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                    <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                                                    <polyline points="3,7 12,13 21,7"></polyline>
+                                                </svg>
+                                                <%= config.email_milist_com %> <small>(Mailing List)</small>
+                                            </div>
+                                            <% } %>
+                                                <% if (config.email_finance) { %>
+                                                    <div class="badge bg-yellow-lt">
+                                                        <svg xmlns="http://www.w3.org/2000/svg"
+                                                            class="icon icon-tabler icon-tabler-mail" width="16"
+                                                            height="16" viewBox="0 0 24 24" stroke-width="2"
+                                                            stroke="currentColor" fill="none" stroke-linecap="round"
+                                                            stroke-linejoin="round">
+                                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                                            <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                                                            <polyline points="3,7 12,13 21,7"></polyline>
+                                                        </svg>
+                                                        <%= config.email_finance %> <small>(Finance)</small>
+                                                    </div>
+                                                    <% } %>
+                                                        <% if (!config.email_comm_manager && !config.email_milist_com &&
+                                                            !config.email_finance) { %>
+                                                            <span class="text-muted">No CC emails</span>
+                                                            <% } %>
+                            </div>
                         </td>
                         <td class="text-center">
                             <% if (config.createdAt) { %>
@@ -88,7 +149,7 @@
                     <% } %>
                         <% } else { %>
                             <tr>
-                                <td colspan="5" class="text-center py-4">
+                                <td colspan="6" class="text-center py-4">
                                     <div class="empty">
                                         <div class="empty-icon">
                                             <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="48" height="48"
