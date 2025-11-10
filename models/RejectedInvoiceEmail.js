@@ -7,17 +7,56 @@ const rejectedInvoiceEmailSchema = new mongoose.Schema({
         unique: true,
         trim: true
     },
-    emails: [{
+    email_main_pic: {
         type: String,
-        required: true,
         trim: true,
         validate: {
             validator: function (email) {
-                return /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email);
+                return !email || /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email);
             },
-            message: 'Please enter a valid email address'
+            message: 'Please enter a valid email address for Main PIC'
         }
-    }],
+    },
+    email_comm: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: function (email) {
+                return !email || /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email);
+            },
+            message: 'Please enter a valid email address for Communication'
+        }
+    },
+    email_comm_manager: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: function (email) {
+                return !email || /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email);
+            },
+            message: 'Please enter a valid email address for Communication Manager'
+        }
+    },
+    email_milist_com: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: function (email) {
+                return !email || /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email);
+            },
+            message: 'Please enter a valid email address for Mailing List Communication'
+        }
+    },
+    email_finance: {
+        type: String,
+        trim: true,
+        validate: {
+            validator: function (email) {
+                return !email || /^\w+([\.-]?\w+)*@\w+([\.-]?\w+)*(\.\w{2,3})+$/.test(email);
+            },
+            message: 'Please enter a valid email address for Finance'
+        }
+    },
     createdAt: {
         type: Date,
         default: Date.now

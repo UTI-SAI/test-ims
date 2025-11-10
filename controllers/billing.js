@@ -174,7 +174,7 @@ exports.fetchCustomerBilling = async (req, res) => {
       if (req.user.role == 'USER') {
         query["accountID"] = { $in: clonedUser.accountID };
       }
-      
+
     }
     console.log({
       req: req.user,
@@ -354,45 +354,110 @@ exports.rejectInvoice = async (req, res) => {
     console.info("=== EMAIL NOTIFICATION PROCESS ===");
     try {
       if (invoiceData) {
+        const accountID = invoiceData.accountID;
+        console.info("Looking up email configuration for accountID:", accountID);
 
-        const documentNumber = invoiceData.invoice?.clnumber || invoiceData.clnumber || 'Unknown';
-        console.info("Generated document number:", documentNumber);
+        // Get email configuration from rejectedInvoiceEmails collection
+        const emailConfigCollection = db.collection("rejectedInvoiceEmails");
+        const emailConfig = await emailConfigCollection.findOne({ accountID: accountID });
+        console.info("Email config found:", emailConfig ? "Yes" : "No");
 
-        // Prepare email data
-        const emailData = {
-          documentNumber: documentNumber,
-          invoices: [
-            {
-              invoiceNumber: invoiceData.invoice?.invoiceno || invoiceData.invoiceno || 'Unknown',
-              reason: rejectionReason || "No reason provided"
-            }
-          ]
-        };
-        console.info("Email data prepared:", emailData);
-
-        // Generate email HTML content
-        console.info("Generating email HTML content...");
-        const emailHtml = generateRejectInvoiceEmail(emailData);
-        console.info("Email HTML generated:", emailHtml ? "Success" : "Failed");
-
-        if (emailHtml) {
-          console.info("Email HTML content length:", emailHtml.length);
-          console.info("First 200 chars of HTML:", emailHtml.substring(0, 200) + "...");
-        }
-
-        // Send email
-        if (emailHtml) {
-          console.info("Attempting to send email to: tiar.agisti@gmail.com");
-          const emailResult = await sendEmail({
-            to: "tiar.agisti@gmail.com", // Hardcoded email for now
-            subject: `Invoice Rejected Notification - Doc ${documentNumber}`,
-            html: emailHtml,
-            text: `Invoice ${emailData.invoices[0].invoiceNumber} has been rejected. Reason: ${rejectionReason}`
-          });
-          console.info("Email send result:", emailResult);
-          console.info(`✅ Reject notification email queued for Invoice: ${emailData.invoices[0].invoiceNumber}`);
+        if (!emailConfig) {
+          console.info("❌ No email configuration found for accountID:", accountID);
+          console.info("Skipping email notification");
         } else {
-          console.info("❌ Email HTML is empty, email not sent");
+          console.info("Email config details:", {
+            accountID: emailConfig.accountID,
+            email_main_pic: emailConfig.email_main_pic,
+            email_comm: emailConfig.email_comm,
+            email_comm_manager: emailConfig.email_comm_manager,
+            email_milist_com: emailConfig.email_milist_com,
+            email_finance: emailConfig.email_finance
+          });
+
+          const documentNumber = invoiceData.invoice?.clnumber || invoiceData.clnumber || 'Unknown';
+          console.info("Generated document number:", documentNumber);
+
+          // Prepare email data
+          const emailData = {
+            documentNumber: documentNumber,
+            invoices: [
+              {
+                invoiceNumber: invoiceData.invoice?.invoiceno || invoiceData.invoiceno || 'Unknown',
+                reason: rejectionReason || "No reason provided"
+              }
+            ]
+          };
+          console.info("Email data prepared:", emailData);
+
+          // Generate email HTML content
+          console.info("Generating email HTML content...");
+          const emailHtml = generateRejectInvoiceEmail(emailData);
+          console.info("Email HTML generated:", emailHtml ? "Success" : "Failed");
+
+          if (emailHtml) {
+            console.info("Email HTML content length:", emailHtml.length);
+            console.info("First 200 chars of HTML:", emailHtml.substring(0, 200) + "...");
+          }
+
+          // Prepare email recipients
+          const toEmails = [];
+          const ccEmails = [];
+
+          // Add TO recipients (email_main_pic and email_comm)
+          if (emailConfig.email_main_pic) {
+            toEmails.push(emailConfig.email_main_pic);
+          }
+          if (emailConfig.email_comm && emailConfig.email_comm !== emailConfig.email_main_pic) {
+            toEmails.push(emailConfig.email_comm);
+          }
+
+          // Add CC recipients (email_comm_manager, email_milist_com, email_finance)
+          if (emailConfig.email_comm_manager) {
+            ccEmails.push(emailConfig.email_comm_manager);
+          }
+          if (emailConfig.email_milist_com && !ccEmails.includes(emailConfig.email_milist_com)) {
+            ccEmails.push(emailConfig.email_milist_com);
+          }
+          if (emailConfig.email_finance && !ccEmails.includes(emailConfig.email_finance)) {
+            ccEmails.push(emailConfig.email_finance);
+          }
+
+          console.info("Email recipients prepared:", {
+            to: toEmails,
+            cc: ccEmails
+          });
+
+          // Send email
+          if (emailHtml && toEmails.length > 0) {
+            const emailOptions = {
+              to: toEmails.join(', '),
+              subject: `Invoice Rejected Notification - Doc ${documentNumber}`,
+              html: emailHtml,
+              text: `Invoice ${emailData.invoices[0].invoiceNumber} has been rejected. Reason: ${rejectionReason}`
+            };
+
+            // Add CC if there are CC recipients
+            if (ccEmails.length > 0) {
+              emailOptions.cc = ccEmails.join(', ');
+            }
+
+            console.info("Attempting to send email with options:", {
+              to: emailOptions.to,
+              cc: emailOptions.cc || 'None',
+              subject: emailOptions.subject
+            });
+
+            const emailResult = await sendEmail(emailOptions);
+            console.info("Email send result:", emailResult);
+            console.info(`✅ Reject notification email queued for Invoice: ${emailData.invoices[0].invoiceNumber}`);
+            console.info(`   TO: ${emailOptions.to}`);
+            if (emailOptions.cc) {
+              console.info(`   CC: ${emailOptions.cc}`);
+            }
+          } else {
+            console.info("❌ Email HTML is empty or no TO recipients, email not sent");
+          }
         }
       } else {
         console.info("❌ No invoice data found, email not sent");
