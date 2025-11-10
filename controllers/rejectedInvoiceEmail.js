@@ -3,6 +3,8 @@ const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
 const { createQueryString } = require("../helpers/createQueryString");
 const RejectedInvoiceEmail = require("../models/RejectedInvoiceEmail");
+const { parseExcelEmailSettings } = require("../helpers/parseExcelEmailSettings");
+const fs = require("fs");
 
 // Fetch all rejected invoice emails with pagination
 exports.fetch = async (req, res) => {
@@ -290,5 +292,144 @@ exports.getById = async (req, res) => {
     } catch (error) {
         console.error("Error getting rejected invoice email:", error);
         res.status(500).json({ success: false, message: "Server error" });
+    }
+};
+
+// Bulk import from Excel file
+exports.bulkImport = async (req, res) => {
+    try {
+        console.info("=== BULK IMPORT EMAIL SETTINGS STARTED ===");
+
+        // Check if file was uploaded
+        if (!req.file) {
+            return res.status(400).json({
+                success: false,
+                message: "No file uploaded"
+            });
+        }
+
+        const filePath = req.file.path;
+        console.info("File uploaded:", filePath);
+
+        // Parse Excel file
+        const parseResult = parseExcelEmailSettings(filePath);
+        console.info("Parse result:", {
+            success: parseResult.success,
+            total: parseResult.total,
+            errorCount: parseResult.errorCount
+        });
+
+        if (!parseResult.success) {
+            // Clean up uploaded file
+            fs.unlinkSync(filePath);
+            return res.status(400).json({
+                success: false,
+                message: parseResult.error
+            });
+        }
+
+        if (parseResult.data.length === 0) {
+            // Clean up uploaded file
+            fs.unlinkSync(filePath);
+            return res.status(400).json({
+                success: false,
+                message: "No valid data found in Excel file",
+                errors: parseResult.errors
+            });
+        }
+
+        const db = mongoose.connection;
+        const collection = db.collection("rejectedInvoiceEmails");
+
+        const results = {
+            inserted: 0,
+            updated: 0,
+            skipped: 0,
+            errors: [...parseResult.errors]
+        };
+
+        // Process each record
+        for (let i = 0; i < parseResult.data.length; i++) {
+            const emailConfig = parseResult.data[i];
+
+            try {
+                // Check if accountID already exists
+                const existingConfig = await collection.findOne({
+                    accountID: emailConfig.accountID
+                });
+
+                if (existingConfig) {
+                    // Update existing configuration
+                    const updateResult = await collection.updateOne(
+                        { accountID: emailConfig.accountID },
+                        {
+                            $set: {
+                                email_main_pic: emailConfig.email_main_pic,
+                                email_comm: emailConfig.email_comm,
+                                email_comm_manager: emailConfig.email_comm_manager,
+                                email_milist_com: emailConfig.email_milist_com,
+                                email_finance: emailConfig.email_finance,
+                                updatedAt: new Date()
+                            }
+                        }
+                    );
+
+                    if (updateResult.modifiedCount > 0) {
+                        results.updated++;
+                        console.info(`Updated: ${emailConfig.accountID}`);
+                    } else {
+                        results.skipped++;
+                        console.info(`Skipped (no changes): ${emailConfig.accountID}`);
+                    }
+                } else {
+                    // Insert new configuration
+                    const newConfig = {
+                        ...emailConfig,
+                        createdAt: new Date(),
+                        updatedAt: new Date()
+                    };
+
+                    await collection.insertOne(newConfig);
+                    results.inserted++;
+                    console.info(`Inserted: ${emailConfig.accountID}`);
+                }
+            } catch (error) {
+                console.error(`Error processing ${emailConfig.accountID}:`, error);
+                results.errors.push({
+                    accountID: emailConfig.accountID,
+                    error: error.message
+                });
+            }
+        }
+
+        // Clean up uploaded file
+        fs.unlinkSync(filePath);
+
+        console.info("=== BULK IMPORT COMPLETED ===");
+        console.info("Results:", results);
+
+        res.json({
+            success: true,
+            message: "Bulk import completed",
+            results: results
+        });
+
+    } catch (error) {
+        console.error("Error in bulk import:", error);
+
+        // Clean up uploaded file if exists
+        if (req.file && req.file.path) {
+            try {
+                fs.unlinkSync(req.file.path);
+            } catch (unlinkError) {
+                console.error("Error deleting file:", unlinkError);
+            }
+        }
+
+        res.status(500).json({
+            success: false,
+            message: "Server error during bulk import",
+            error: error.message
+        });
     }
 };
