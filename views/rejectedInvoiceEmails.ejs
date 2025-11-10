@@ -197,47 +197,57 @@
                             </div>
                         </div>
 
+                        <!-- TO Email Group -->
                         <div class="row">
-                            <div class="col-lg-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Main PIC Email <span
-                                            class="text-muted">(TO)</span></label>
-                                    <input type="email" class="form-control" x-model="config.email_main_pic"
-                                        placeholder="Enter main PIC email address">
-                                </div>
-                            </div>
-                            <div class="col-lg-6">
-                                <div class="mb-3">
-                                    <label class="form-label">Communication Email <span
-                                            class="text-muted">(TO)</span></label>
-                                    <input type="email" class="form-control" x-model="config.email_comm"
-                                        placeholder="Enter communication email address">
+                            <div class="col-12">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h4 class="card-title">
+                                            <span class="badge bg-blue me-2">TO</span>
+                                        </h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Main PIC Email</label>
+                                            <input type="email" class="form-control" x-model="config.email_main_pic"
+                                                placeholder="Enter main PIC email address">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Communication Email</label>
+                                            <input type="email" class="form-control" x-model="config.email_comm"
+                                                placeholder="Enter communication email address">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
 
+                        <!-- CC Email Group -->
                         <div class="row">
-                            <div class="col-lg-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Communication Manager <span
-                                            class="text-muted">(CC)</span></label>
-                                    <input type="email" class="form-control" x-model="config.email_comm_manager"
-                                        placeholder="Enter comm manager email">
-                                </div>
-                            </div>
-                            <div class="col-lg-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Mailing List Communication <span
-                                            class="text-muted">(CC)</span></label>
-                                    <input type="email" class="form-control" x-model="config.email_milist_com"
-                                        placeholder="Enter mailing list email">
-                                </div>
-                            </div>
-                            <div class="col-lg-4">
-                                <div class="mb-3">
-                                    <label class="form-label">Finance Email <span class="text-muted">(CC)</span></label>
-                                    <input type="email" class="form-control" x-model="config.email_finance"
-                                        placeholder="Enter finance email address">
+                            <div class="col-12">
+                                <div class="card mb-3">
+                                    <div class="card-header">
+                                        <h4 class="card-title">
+                                            <span class="badge bg-orange me-2">CC</span>
+                                        </h4>
+                                    </div>
+                                    <div class="card-body">
+                                        <div class="mb-3">
+                                            <label class="form-label">Communication Manager Email</label>
+                                            <input type="email" class="form-control" x-model="config.email_comm_manager"
+                                                placeholder="Enter communication manager email">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Mailing List Communication Email</label>
+                                            <input type="email" class="form-control" x-model="config.email_milist_com"
+                                                placeholder="Enter mailing list communication email">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Finance Email</label>
+                                            <input type="email" class="form-control" x-model="config.email_finance"
+                                                placeholder="Enter finance email address">
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
