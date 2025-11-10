@@ -17,7 +17,13 @@ exports.fetch = async (req, res) => {
             query.accountID = { $regex: accountID, $options: "i" };
         }
         if (email) {
-            query.emails = { $in: [new RegExp(email, "i")] };
+            query.$or = [
+                { email_main_pic: { $regex: email, $options: "i" } },
+                { email_comm: { $regex: email, $options: "i" } },
+                { email_comm_manager: { $regex: email, $options: "i" } },
+                { email_milist_com: { $regex: email, $options: "i" } },
+                { email_finance: { $regex: email, $options: "i" } }
+            ];
         }
 
         const db = mongoose.connection;
@@ -58,29 +64,36 @@ exports.fetch = async (req, res) => {
 // Create new rejected invoice email configuration
 exports.create = async (req, res) => {
     try {
-        const { accountID, emails } = req.body;
+        const {
+            accountID,
+            email_main_pic,
+            email_comm,
+            email_comm_manager,
+            email_milist_com,
+            email_finance
+        } = req.body;
 
-        console.info("Creating rejected invoice email config:", { accountID, emails });
+        console.info("Creating rejected invoice email config:", {
+            accountID,
+            email_main_pic,
+            email_comm,
+            email_comm_manager,
+            email_milist_com,
+            email_finance
+        });
 
-        if (!accountID || !emails) {
+        if (!accountID) {
             return res.status(400).json({
                 success: false,
-                message: "Account ID and emails are required"
+                message: "Account ID is required"
             });
         }
 
-        // Parse emails - can be comma-separated string or array
-        let emailArray = [];
-        if (typeof emails === 'string') {
-            emailArray = emails.split(',').map(email => email.trim()).filter(email => email);
-        } else if (Array.isArray(emails)) {
-            emailArray = emails.filter(email => email && email.trim());
-        }
-
-        if (emailArray.length === 0) {
+        // At least one email should be provided
+        if (!email_main_pic && !email_comm && !email_comm_manager && !email_milist_com && !email_finance) {
             return res.status(400).json({
                 success: false,
-                message: "At least one email is required"
+                message: "At least one email address is required"
             });
         }
 
@@ -99,7 +112,11 @@ exports.create = async (req, res) => {
         // Create new configuration
         const newConfig = {
             accountID,
-            emails: emailArray,
+            email_main_pic: email_main_pic || "",
+            email_comm: email_comm || "",
+            email_comm_manager: email_comm_manager || "",
+            email_milist_com: email_milist_com || "",
+            email_finance: email_finance || "",
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -126,29 +143,37 @@ exports.create = async (req, res) => {
 exports.update = async (req, res) => {
     try {
         const { id } = req.params;
-        const { accountID, emails } = req.body;
+        const {
+            accountID,
+            email_main_pic,
+            email_comm,
+            email_comm_manager,
+            email_milist_com,
+            email_finance
+        } = req.body;
 
-        console.info("Updating rejected invoice email config:", { id, accountID, emails });
+        console.info("Updating rejected invoice email config:", {
+            id,
+            accountID,
+            email_main_pic,
+            email_comm,
+            email_comm_manager,
+            email_milist_com,
+            email_finance
+        });
 
-        if (!accountID || !emails) {
+        if (!accountID) {
             return res.status(400).json({
                 success: false,
-                message: "Account ID and emails are required"
+                message: "Account ID is required"
             });
         }
 
-        // Parse emails - can be comma-separated string or array
-        let emailArray = [];
-        if (typeof emails === 'string') {
-            emailArray = emails.split(',').map(email => email.trim()).filter(email => email);
-        } else if (Array.isArray(emails)) {
-            emailArray = emails.filter(email => email && email.trim());
-        }
-
-        if (emailArray.length === 0) {
+        // At least one email should be provided
+        if (!email_main_pic && !email_comm && !email_comm_manager && !email_milist_com && !email_finance) {
             return res.status(400).json({
                 success: false,
-                message: "At least one email is required"
+                message: "At least one email address is required"
             });
         }
 
@@ -174,7 +199,11 @@ exports.update = async (req, res) => {
             {
                 $set: {
                     accountID,
-                    emails: emailArray,
+                    email_main_pic: email_main_pic || "",
+                    email_comm: email_comm || "",
+                    email_comm_manager: email_comm_manager || "",
+                    email_milist_com: email_milist_com || "",
+                    email_finance: email_finance || "",
                     updatedAt: new Date()
                 }
             }
