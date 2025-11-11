@@ -30,7 +30,7 @@ router.get(
 
 router.get(
   "/exports-customer",
-  ensureRoles(ROLES.USER),
+  ensureRoles(ROLES.USER, ROLES.SUPER_ADMIN, ROLES.ADMIN),
   billingController.exportsCustomerBilling
 );
 

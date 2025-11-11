@@ -76,7 +76,7 @@
                     <a href="#" class="btn btn-link link-secondary" data-bs-dismiss="modal">
                         Cancel
                     </a>
-                    <button type="submit" class="btn btn-primary ms-auto" data-bs-dismiss="modal">
+                    <button type="submit" class="btn btn-primary ms-auto" data-bs-dismiss="modal" id="exportCustomerSubmitBtn">
                         <!-- Download SVG icon from http://tabler-icons.io/i/plus -->
                         <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-database-export"
                             width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
@@ -158,5 +158,32 @@
 
         // Initialize on load
         updateExportState();
+
+        // Handle form submission - clear selections for multiple selection exports
+        const exportForm = document.querySelector("#modal-export-customer form");
+        const exportCustomerSubmitBtn = document.getElementById("exportCustomerSubmitBtn");
+        
+        if (exportCustomerSubmitBtn) {
+            exportCustomerSubmitBtn.addEventListener("click", function(e) {
+                // Get selected report type
+                const selectedReportType = exportForm.querySelector('input[name="reportType"]:checked');
+                
+                if (selectedReportType && 
+                    (selectedReportType.value === 'MULTIPLE_INVOICE' || 
+                     selectedReportType.value === 'MULTIPLE_ROW')) {
+                    // Clear selections after a short delay to allow form submission
+                    setTimeout(function() {
+                        localStorage.removeItem('selectedItems');
+                        console.log('Cleared selectedItems after multiple selection export');
+                        
+                        // Reload page to refresh UI
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 500);
+                    }, 200);
+                }
+            });
+        }
     });
 </script>
+```

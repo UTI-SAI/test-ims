@@ -28,9 +28,9 @@
     "moment-timezone": "^0.5.43",
     "mongoose": "^7.5.0",
     "morgan": "^1.10.0",
-    "mssql": "^7.0.0",
+    "mssql": "^12.1.0",
     "multer": "^1.4.5-lts.1",
-    "nodemailer": "^6.9.6",
+    "nodemailer": "^7.0.10",
     "nodemon": "^3.0.1",
     "passport": "^0.6.0",
     "passport-local": "^1.0.0",
@@ -40,6 +40,6 @@
     "swagger-ui-express": "^5.0.0",
     "winston": "^3.11.0",
     "winston-daily-rotate-file": "^4.7.1",
-    "xlsx": "^0.18.5"
+    "xlsx": "https://cdn.sheetjs.com/xlsx-latest/xlsx-latest.tgz"
   }
 }
