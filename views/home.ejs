@@ -276,14 +276,6 @@
                     });
                 }
 
-                // Also when Export Billing form is submitted (if exists)
-                const exportForm = document.querySelector("#modal-export-billing form");
-                if (exportForm) {
-                    exportForm.addEventListener("submit", () => {
-                        clearSelectedItems();
-                    });
-                }
-
                 // Automatically clear when user leaves /billing page
                 window.addEventListener("beforeunload", () => {
                     if (!window.location.pathname.startsWith("/billing")) {
