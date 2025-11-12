@@ -494,6 +494,18 @@ exports.exports = async (req, res) => {
   const db = mongoose.connection;
   const collection = db.collection("billing");
 
+  // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
+  if (reportType === "MULTIPLE_INVOICE") {
+    if (!selectedIds) {
+      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+    }
+
+    const ids = selectedIds.split(",").map((id) => id.trim());
+    
+    // Render view for multiple invoice downloads
+    return res.render('downloadMultipleInvoices', { ids });
+  }
+
   if (reportType === "CURRENT") {
     const query = buildBillingSearchQuery(searchParam);
     billings = await collection.find(query).toArray();
@@ -722,6 +734,18 @@ exports.exportsCustomerBilling = async (req, res) => {
   const db = mongoose.connection;
   const collection = db.collection("billing");
 
+  // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
+  if (reportType === "MULTIPLE_INVOICE") {
+    if (!selectedIds) {
+      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+    }
+
+    const ids = selectedIds.split(",").map((id) => id.trim());
+    
+    // Render view for multiple invoice downloads
+    return res.render('downloadMultipleInvoices', { ids });
+  }
+
   if (reportType === "CURRENT") {
     const query = buildBillingSearchQuery(searchParam);
     billings = await collection.find(query).toArray();
@@ -778,3 +802,4 @@ exports.exportsCustomerBilling = async (req, res) => {
     res.download(fileName);
   });
 };
+

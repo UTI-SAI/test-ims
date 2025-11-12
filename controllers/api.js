@@ -265,6 +265,7 @@ exports.uploadInvoiceFile = async (req, res) => {
 
 exports.downloadInvoice = async (req, res) => {
   const { id } = req.params;
+  const { download } = req.query; // Check if this is a force download request
 
   try {
     const db = mongoose.connection;
@@ -291,10 +292,26 @@ exports.downloadInvoice = async (req, res) => {
     const { customerDownloadHistory = [], clnumber, invoiceno } = billing;
 
     if (logDir === null) {
-      const logDirResult = await readFile(
-        '\\\\ckb-a0000036932\\Invoice Automation\\logDir.json',
-        'utf8'
-      );
+      // Old hardcoded path - now using environment variables
+      // const logDirResult = await readFile('\\\\ckb-a0000036932\\Invoice Automation\\logDir.json', 'utf8');
+      
+      const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
+      const logDirPath = process.env.LOG_DIR_PATH || '\\Invoice Automation\\logDir.json';
+      
+      // Check if using local path or network path
+      const isLocalPath = !networkServer.startsWith('\\\\');
+      
+      let fullLogDirPath;
+      if (isLocalPath) {
+        // Local path relative to project root
+        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
+        fullLogDirPath = path.join(__dirname, '..', '..', networkServer, logDirPath);
+      } else {
+        // Network UNC path
+        fullLogDirPath = `${networkServer}${logDirPath}`;
+      }
+      
+      const logDirResult = await readFile(fullLogDirPath, 'utf8');
 
       const logDirList = JSON.parse(logDirResult);
 
@@ -330,13 +347,45 @@ exports.downloadInvoice = async (req, res) => {
       }
     );
 
-    let networkPath = `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${clnumber}\\${invoiceno}.pdf`;
-
+    // Old hardcoded path - now using environment variables
+    // let networkPath = `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${clnumber}\\${invoiceno}.pdf`;
+    // if (billing.billingStatus === 'PAID') {
+    //   networkPath = `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
+    // }
+    
+    // Use environment variables for network paths
+    const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
+    const invoiceResultPath = process.env.INVOICE_RESULT_PATH || '\\Invoice Automation\\7. Result';
+    const archivePaidPath = process.env.ARCHIVE_PAID_PATH || '\\Archive - Paid Invoice';
+    
+    // Check if using local path or network path
+    const isLocalPath = !networkServer.startsWith('\\\\');
+    
+    let networkPath;
     if (billing.billingStatus === 'PAID') {
-      networkPath = `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
+      // For PAID invoices - Archive path
+      if (isLocalPath) {
+        // Local path: ../../CKB-A0000036932/Archive - Paid Invoice/...
+        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
+        networkPath = path.join(__dirname, '..', '..', networkServer, archivePaidPath, monthDirPath, clnumber, `${invoiceno}.pdf`);
+      } else {
+        // Network path: \\CKB-A0000036932\Archive - Paid Invoice\...
+        networkPath = `${networkServer}${archivePaidPath}\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
+      }
+    } else {
+      // For unpaid invoices - Result path
+      if (isLocalPath) {
+        // Local path: ../../CKB-A0000036932/Invoice Automation/7. Result/...
+        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
+        networkPath = path.join(__dirname, '..', '..', networkServer, invoiceResultPath, clnumber, `${invoiceno}.pdf`);
+      } else {
+        // Network path: \\CKB-A0000036932\Invoice Automation\7. Result\...
+        networkPath = `${networkServer}${invoiceResultPath}\\${clnumber}\\${invoiceno}.pdf`;
+      }
     }
 
-    const pdfPath = path.join(networkPath);
+    console.log('networkPath ', networkPath);
+    const pdfPath = isLocalPath ? networkPath : path.join(networkPath);
 
     // CHeck if path valid to prevent app terminated
     if (!fs.existsSync(pdfPath)) {
@@ -347,6 +396,15 @@ exports.downloadInvoice = async (req, res) => {
     }
 
     res.contentType('application/pdf');
+
+    // If download=true (multiple invoices), force download
+    // Otherwise, preview in browser (single invoice)
+    if (download === 'true') {
+      res.setHeader('Content-Disposition', `attachment; filename="${invoiceno}.pdf"`);
+    } else {
+      // Explicitly set inline for preview
+      res.setHeader('Content-Disposition', `inline; filename="${invoiceno}.pdf"`);
+    }
 
     const stream = fs.createReadStream(pdfPath);
     stream.on('error', (err) => {
