@@ -52,11 +52,14 @@ function parseExcelEmailSettings(filePath) {
         // Get headers from first row
         const headers = jsonData[0];
 
-        // Find column indices based on file type
+        // Find column indices based on file type and headers
         let customerIdCol, emailMainPicCol, emailCommCol, emailCommManagerCol, emailMilistComCol, emailFinanceCol;
 
-        if (fileExt === '.csv') {
-            // For CSV template format
+        // Check if it's the new template format (both CSV and new Excel use same format)
+        const isNewFormat = headers.includes('accountID') && headers.includes('email_main_pic');
+
+        if (isNewFormat || fileExt === '.csv') {
+            // For new template format (CSV and new Excel)
             customerIdCol = 0; // accountID
             emailMainPicCol = 1; // email_main_pic
             emailCommCol = 2; // email_comm
@@ -64,7 +67,7 @@ function parseExcelEmailSettings(filePath) {
             emailMilistComCol = 4; // email_milist_com
             emailFinanceCol = 5; // email_finance
         } else {
-            // For Excel legacy format
+            // For Excel legacy format (old structure)
             customerIdCol = 0; // Column A
             emailMainPicCol = 4; // Column E
             emailCommCol = 5; // Column F
