@@ -6,10 +6,15 @@
         toggleSelectAll() {
             const allCheckboxes = [...document.querySelectorAll('.select-item')];
             if (this.selectAll) {
-                this.selectedItems = allCheckboxes.map(el => el.value);
+                // Add current page items to existing selections
+                const currentPageIds = allCheckboxes.map(el => el.value);
+                const existingIds = this.selectedItems.filter(id => !currentPageIds.includes(id));
+                this.selectedItems = [...existingIds, ...currentPageIds];
                 allCheckboxes.forEach(el => el.checked = true);
             } else {
-                this.selectedItems = [];
+                // Remove only current page items from selections
+                const currentPageIds = allCheckboxes.map(el => el.value);
+                this.selectedItems = this.selectedItems.filter(id => !currentPageIds.includes(id));
                 allCheckboxes.forEach(el => el.checked = false);
             }
             this.syncStorage();
@@ -38,11 +43,24 @@
 
         restoreCheckboxes() {
             const allCheckboxes = [...document.querySelectorAll('.select-item')];
+            const storedItems = JSON.parse(localStorage.getItem('selectedItems') || '[]');
+
             allCheckboxes.forEach(el => {
-                el.checked = this.selectedItems.includes(el.value);
+                el.checked = storedItems.includes(el.value);
             });
 
+            this.selectedItems = storedItems;
+
             this.selectAll = allCheckboxes.length > 0 && allCheckboxes.every(el => el.checked);
+        },
+
+        clearAllSelections() {
+            this.selectedItems = [];
+            this.selectAll = false;
+            const allCheckboxes = [...document.querySelectorAll('.select-item')];
+            allCheckboxes.forEach(el => el.checked = false);
+            localStorage.removeItem('selectedItems');
+            console.log('All selections cleared');
         }
     }"
 
@@ -56,7 +74,15 @@
 
     <div class="table-responsive">
         <div class="text-muted p-2 mt-2">
-            <span x-text="`${selectedItems.length} selected`"></span>
+            <div>
+                <span x-text="`${selectedItems.length} selected`"></span>
+            </div>
+            <button class="btn btn-sm btn-outline-danger mt-1" 
+                    x-show="selectedItems.length > 0" 
+                    @click="clearAllSelections()"
+                    type="button">
+                Clear All
+            </button>
         </div>
         <table class="table table-vcenter">
             <thead>
