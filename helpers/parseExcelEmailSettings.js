@@ -1,7 +1,9 @@
 const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
 
 /**
- * Parse Excel file for rejected invoice email settings
+ * Parse Excel/CSV file for rejected invoice email settings
  * Expected columns:
  * A: Customer ID -> maps to accountID
  * B: Account Holder Name (ignored)
@@ -16,13 +18,32 @@ const xlsx = require('xlsx');
  */
 function parseExcelEmailSettings(filePath) {
     try {
-        // Read Excel file
-        const workbook = xlsx.readFile(filePath);
-        const sheetName = workbook.SheetNames[0]; // Get first sheet
-        const worksheet = workbook.Sheets[sheetName];
+        const fileExt = path.extname(filePath).toLowerCase();
+        let jsonData;
 
-        // Convert to JSON (with header row as keys)
-        const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        if (fileExt === '.csv') {
+            // Parse CSV file
+            const csvContent = fs.readFileSync(filePath, 'utf8');
+            const lines = csvContent.split('\n').filter(line => line.trim());
+
+            if (lines.length < 2) {
+                throw new Error('CSV file is empty or has no data rows');
+            }
+
+            // Parse CSV manually
+            jsonData = lines.map(line => {
+                // Simple CSV parsing (handles basic cases)
+                return line.split(',').map(cell => cell.trim());
+            });
+        } else {
+            // Read Excel file
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0]; // Get first sheet
+            const worksheet = workbook.Sheets[sheetName];
+
+            // Convert to JSON (with header row as keys)
+            jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        }
 
         if (jsonData.length < 2) {
             throw new Error('Excel file is empty or has no data rows');
@@ -31,13 +52,26 @@ function parseExcelEmailSettings(filePath) {
         // Get headers from first row
         const headers = jsonData[0];
 
-        // Find column indices
-        const customerIdCol = 0; // Column A
-        const emailMainPicCol = 4; // Column E
-        const emailCommCol = 5; // Column F
-        const emailCommManagerCol = 7; // Column H
-        const emailMilistComCol = 8; // Column I
-        const emailFinanceCol = 9; // Column J
+        // Find column indices based on file type
+        let customerIdCol, emailMainPicCol, emailCommCol, emailCommManagerCol, emailMilistComCol, emailFinanceCol;
+
+        if (fileExt === '.csv') {
+            // For CSV template format
+            customerIdCol = 0; // accountID
+            emailMainPicCol = 1; // email_main_pic
+            emailCommCol = 2; // email_comm
+            emailCommManagerCol = 3; // email_comm_manager
+            emailMilistComCol = 4; // email_milist_com
+            emailFinanceCol = 5; // email_finance
+        } else {
+            // For Excel legacy format
+            customerIdCol = 0; // Column A
+            emailMainPicCol = 4; // Column E
+            emailCommCol = 5; // Column F
+            emailCommManagerCol = 7; // Column H
+            emailMilistComCol = 8; // Column I
+            emailFinanceCol = 9; // Column J
+        }
 
         const results = [];
         const errors = [];

@@ -571,19 +571,33 @@
                                     <li><strong>email_finance:</strong> Finance department emails</li>
                                 </ul>
                                 <div class="d-flex align-items-center mb-2">
-                                    <a href="/templates/email-settings-template.xlsx"
-                                        class="btn btn-outline-primary btn-sm" download>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16"
-                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
-                                            stroke-linecap="round" stroke-linejoin="round">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
-                                            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
-                                            <polyline points="7,11 12,16 17,11" />
-                                            <line x1="12" y1="4" x2="12" y2="16" />
-                                        </svg>
-                                        Download Template
-                                    </a>
-                                    <small class="text-muted ms-2">Use this template to ensure correct format</small>
+                                    <div class="btn-group" role="group">
+                                        <a href="/templates/email-settings-simple.xlsx"
+                                            class="btn btn-outline-primary btn-sm" download>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16"
+                                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                                                <polyline points="7,11 12,16 17,11" />
+                                                <line x1="12" y1="4" x2="12" y2="16" />
+                                            </svg>
+                                            Excel Template
+                                        </a>
+                                        <a href="/templates/email-settings-template.csv"
+                                            class="btn btn-outline-secondary btn-sm" download>
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16"
+                                                viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                                stroke-linecap="round" stroke-linejoin="round">
+                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                                                <polyline points="7,11 12,16 17,11" />
+                                                <line x1="12" y1="4" x2="12" y2="16" />
+                                            </svg>
+                                            CSV Template
+                                        </a>
+                                    </div>
+                                    <small class="text-muted ms-2">Download template to ensure correct format</small>
                                 </div>
                                 <p class="mt-2 mb-0"><small><strong>Note:</strong> For multiple emails in one field,
                                         separate them with semicolons (;).
@@ -594,10 +608,10 @@
                         <!-- File Upload -->
                         <div class="mb-3" x-show="!bulkImportResult && !bulkImportLoading">
                             <label class="form-label">Select Excel File</label>
-                            <input type="file" class="form-control" accept=".xlsx,.xls"
+                            <input type="file" class="form-control" accept=".xlsx,.xls,.csv"
                                 @change="handleFileSelect($event)" :disabled="bulkImportLoading">
                             <small class="form-hint">
-                                Supported formats: .xlsx, .xls (Max size: 50MB)
+                                Supported formats: .xlsx, .xls, .csv (Max size: 50MB)
                             </small>
                         </div>
 
