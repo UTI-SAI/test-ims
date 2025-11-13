@@ -62,22 +62,22 @@ function parseExcelEmailSettings(filePath) {
                 continue;
             }
 
-            // Extract emails (only take email addresses, ignore names)
+            // Extract emails (support multiple emails with semicolon delimiter)
             const emailConfig = {
                 accountID: accountID,
-                email_main_pic: extractEmail(row[emailMainPicCol]) || '',
-                email_comm: extractEmail(row[emailCommCol]) || '',
-                email_comm_manager: extractEmail(row[emailCommManagerCol]) || '',
-                email_milist_com: extractEmail(row[emailMilistComCol]) || '',
-                email_finance: extractEmail(row[emailFinanceCol]) || ''
+                email_main_pic: extractEmail(row[emailMainPicCol]) || [],
+                email_comm: extractEmail(row[emailCommCol]) || [],
+                email_comm_manager: extractEmail(row[emailCommManagerCol]) || [],
+                email_milist_com: extractEmail(row[emailMilistComCol]) || [],
+                email_finance: extractEmail(row[emailFinanceCol]) || []
             };
 
             // Check if at least one email is provided
-            const hasEmail = emailConfig.email_main_pic ||
-                emailConfig.email_comm ||
-                emailConfig.email_comm_manager ||
-                emailConfig.email_milist_com ||
-                emailConfig.email_finance;
+            const hasEmail = emailConfig.email_main_pic.length > 0 ||
+                emailConfig.email_comm.length > 0 ||
+                emailConfig.email_comm_manager.length > 0 ||
+                emailConfig.email_milist_com.length > 0 ||
+                emailConfig.email_finance.length > 0;
 
             if (!hasEmail) {
                 errors.push({
@@ -111,34 +111,46 @@ function parseExcelEmailSettings(filePath) {
 }
 
 /**
- * Extract email from cell value
- * Handles cases where cell contains both name and email
+ * Extract emails from cell value (now supports multiple emails)
+ * Handles cases where cell contains both name and email, and multiple emails
  * Examples:
- * - "tiar.agisti@gmail.com" -> "tiar.agisti@gmail.com"
- * - "John Doe <john@example.com>" -> "john@example.com"
- * - Multiple emails separated by comma or semicolon -> take first one
+ * - "tiar.agisti@gmail.com" -> ["tiar.agisti@gmail.com"]
+ * - "tiar@gmail.com; john@gmail.com" -> ["tiar@gmail.com", "john@gmail.com"]
+ * - "John Doe <john@example.com>; Jane <jane@example.com>" -> ["john@example.com", "jane@example.com"]
  */
 function extractEmail(cellValue) {
-    if (!cellValue) return '';
+    if (!cellValue) return [];
 
     const value = String(cellValue).trim();
-    if (!value) return '';
+    if (!value) return [];
 
-    // Check if value contains email pattern
-    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
-    const matches = value.match(emailRegex);
+    // Split by semicolon first to handle multiple emails
+    const emailParts = value.split(';').map(part => part.trim()).filter(part => part);
+    const extractedEmails = [];
 
-    if (matches && matches.length > 0) {
-        // Return first email found
-        return matches[0].toLowerCase();
+    for (const part of emailParts) {
+        // Check if part contains email pattern
+        const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
+        const matches = part.match(emailRegex);
+
+        if (matches && matches.length > 0) {
+            // Add all emails found in this part
+            matches.forEach(email => {
+                const cleanEmail = email.toLowerCase().trim();
+                if (cleanEmail && !extractedEmails.includes(cleanEmail)) {
+                    extractedEmails.push(cleanEmail);
+                }
+            });
+        } else if (part.includes('@')) {
+            // If no regex match but contains @, try to use it as email
+            const cleanEmail = part.toLowerCase().trim();
+            if (cleanEmail && !extractedEmails.includes(cleanEmail)) {
+                extractedEmails.push(cleanEmail);
+            }
+        }
     }
 
-    // If no email pattern found, return original value if it looks like an email
-    if (value.includes('@')) {
-        return value.toLowerCase();
-    }
-
-    return '';
+    return extractedEmails;
 }
 
 /**
