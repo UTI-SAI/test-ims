@@ -91,8 +91,23 @@ exports.create = async (req, res) => {
             });
         }
 
+        // Parse and validate email arrays
+        const parseEmailArray = (emailInput) => {
+            if (!emailInput) return [];
+            if (Array.isArray(emailInput)) return emailInput.filter(email => email && email.trim());
+            return emailInput.split(',').map(email => email.trim()).filter(email => email);
+        };
+
+        const emailMainPicArray = parseEmailArray(email_main_pic);
+        const emailCommArray = parseEmailArray(email_comm);
+        const emailCommManagerArray = parseEmailArray(email_comm_manager);
+        const emailMilistComArray = parseEmailArray(email_milist_com);
+        const emailFinanceArray = parseEmailArray(email_finance);
+
         // At least one email should be provided
-        if (!email_main_pic && !email_comm && !email_comm_manager && !email_milist_com && !email_finance) {
+        if (emailMainPicArray.length === 0 && emailCommArray.length === 0 &&
+            emailCommManagerArray.length === 0 && emailMilistComArray.length === 0 &&
+            emailFinanceArray.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "At least one email address is required"
@@ -114,11 +129,11 @@ exports.create = async (req, res) => {
         // Create new configuration
         const newConfig = {
             accountID,
-            email_main_pic: email_main_pic || "",
-            email_comm: email_comm || "",
-            email_comm_manager: email_comm_manager || "",
-            email_milist_com: email_milist_com || "",
-            email_finance: email_finance || "",
+            email_main_pic: emailMainPicArray,
+            email_comm: emailCommArray,
+            email_comm_manager: emailCommManagerArray,
+            email_milist_com: emailMilistComArray,
+            email_finance: emailFinanceArray,
             createdAt: new Date(),
             updatedAt: new Date()
         };
@@ -171,8 +186,23 @@ exports.update = async (req, res) => {
             });
         }
 
+        // Parse and validate email arrays
+        const parseEmailArray = (emailInput) => {
+            if (!emailInput) return [];
+            if (Array.isArray(emailInput)) return emailInput.filter(email => email && email.trim());
+            return emailInput.split(',').map(email => email.trim()).filter(email => email);
+        };
+
+        const emailMainPicArray = parseEmailArray(email_main_pic);
+        const emailCommArray = parseEmailArray(email_comm);
+        const emailCommManagerArray = parseEmailArray(email_comm_manager);
+        const emailMilistComArray = parseEmailArray(email_milist_com);
+        const emailFinanceArray = parseEmailArray(email_finance);
+
         // At least one email should be provided
-        if (!email_main_pic && !email_comm && !email_comm_manager && !email_milist_com && !email_finance) {
+        if (emailMainPicArray.length === 0 && emailCommArray.length === 0 &&
+            emailCommManagerArray.length === 0 && emailMilistComArray.length === 0 &&
+            emailFinanceArray.length === 0) {
             return res.status(400).json({
                 success: false,
                 message: "At least one email address is required"
@@ -201,11 +231,11 @@ exports.update = async (req, res) => {
             {
                 $set: {
                     accountID,
-                    email_main_pic: email_main_pic || "",
-                    email_comm: email_comm || "",
-                    email_comm_manager: email_comm_manager || "",
-                    email_milist_com: email_milist_com || "",
-                    email_finance: email_finance || "",
+                    email_main_pic: emailMainPicArray,
+                    email_comm: emailCommArray,
+                    email_comm_manager: emailCommManagerArray,
+                    email_milist_com: emailMilistComArray,
+                    email_finance: emailFinanceArray,
                     updatedAt: new Date()
                 }
             }
