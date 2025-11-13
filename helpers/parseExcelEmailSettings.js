@@ -1,7 +1,9 @@
 const xlsx = require('xlsx');
+const fs = require('fs');
+const path = require('path');
 
 /**
- * Parse Excel file for rejected invoice email settings
+ * Parse Excel/CSV file for rejected invoice email settings
  * Expected columns:
  * A: Customer ID -> maps to accountID
  * B: Account Holder Name (ignored)
@@ -16,13 +18,32 @@ const xlsx = require('xlsx');
  */
 function parseExcelEmailSettings(filePath) {
     try {
-        // Read Excel file
-        const workbook = xlsx.readFile(filePath);
-        const sheetName = workbook.SheetNames[0]; // Get first sheet
-        const worksheet = workbook.Sheets[sheetName];
+        const fileExt = path.extname(filePath).toLowerCase();
+        let jsonData;
 
-        // Convert to JSON (with header row as keys)
-        const jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        if (fileExt === '.csv') {
+            // Parse CSV file
+            const csvContent = fs.readFileSync(filePath, 'utf8');
+            const lines = csvContent.split('\n').filter(line => line.trim());
+
+            if (lines.length < 2) {
+                throw new Error('CSV file is empty or has no data rows');
+            }
+
+            // Parse CSV manually
+            jsonData = lines.map(line => {
+                // Simple CSV parsing (handles basic cases)
+                return line.split(',').map(cell => cell.trim());
+            });
+        } else {
+            // Read Excel file
+            const workbook = xlsx.readFile(filePath);
+            const sheetName = workbook.SheetNames[0]; // Get first sheet
+            const worksheet = workbook.Sheets[sheetName];
+
+            // Convert to JSON (with header row as keys)
+            jsonData = xlsx.utils.sheet_to_json(worksheet, { header: 1 });
+        }
 
         if (jsonData.length < 2) {
             throw new Error('Excel file is empty or has no data rows');
@@ -31,13 +52,29 @@ function parseExcelEmailSettings(filePath) {
         // Get headers from first row
         const headers = jsonData[0];
 
-        // Find column indices
-        const customerIdCol = 0; // Column A
-        const emailMainPicCol = 4; // Column E
-        const emailCommCol = 5; // Column F
-        const emailCommManagerCol = 7; // Column H
-        const emailMilistComCol = 8; // Column I
-        const emailFinanceCol = 9; // Column J
+        // Find column indices based on file type and headers
+        let customerIdCol, emailMainPicCol, emailCommCol, emailCommManagerCol, emailMilistComCol, emailFinanceCol;
+
+        // Check if it's the new template format (both CSV and new Excel use same format)
+        const isNewFormat = headers.includes('accountID') && headers.includes('email_main_pic');
+
+        if (isNewFormat || fileExt === '.csv') {
+            // For new template format (CSV and new Excel)
+            customerIdCol = 0; // accountID
+            emailMainPicCol = 1; // email_main_pic
+            emailCommCol = 2; // email_comm
+            emailCommManagerCol = 3; // email_comm_manager
+            emailMilistComCol = 4; // email_milist_com
+            emailFinanceCol = 5; // email_finance
+        } else {
+            // For Excel legacy format (old structure)
+            customerIdCol = 0; // Column A
+            emailMainPicCol = 4; // Column E
+            emailCommCol = 5; // Column F
+            emailCommManagerCol = 7; // Column H
+            emailMilistComCol = 8; // Column I
+            emailFinanceCol = 9; // Column J
+        }
 
         const results = [];
         const errors = [];
@@ -62,22 +99,22 @@ function parseExcelEmailSettings(filePath) {
                 continue;
             }
 
-            // Extract emails (only take email addresses, ignore names)
+            // Extract emails (support multiple emails with semicolon delimiter)
             const emailConfig = {
                 accountID: accountID,
-                email_main_pic: extractEmail(row[emailMainPicCol]) || '',
-                email_comm: extractEmail(row[emailCommCol]) || '',
-                email_comm_manager: extractEmail(row[emailCommManagerCol]) || '',
-                email_milist_com: extractEmail(row[emailMilistComCol]) || '',
-                email_finance: extractEmail(row[emailFinanceCol]) || ''
+                email_main_pic: extractEmail(row[emailMainPicCol]) || [],
+                email_comm: extractEmail(row[emailCommCol]) || [],
+                email_comm_manager: extractEmail(row[emailCommManagerCol]) || [],
+                email_milist_com: extractEmail(row[emailMilistComCol]) || [],
+                email_finance: extractEmail(row[emailFinanceCol]) || []
             };
 
             // Check if at least one email is provided
-            const hasEmail = emailConfig.email_main_pic ||
-                emailConfig.email_comm ||
-                emailConfig.email_comm_manager ||
-                emailConfig.email_milist_com ||
-                emailConfig.email_finance;
+            const hasEmail = emailConfig.email_main_pic.length > 0 ||
+                emailConfig.email_comm.length > 0 ||
+                emailConfig.email_comm_manager.length > 0 ||
+                emailConfig.email_milist_com.length > 0 ||
+                emailConfig.email_finance.length > 0;
 
             if (!hasEmail) {
                 errors.push({
@@ -111,34 +148,46 @@ function parseExcelEmailSettings(filePath) {
 }
 
 /**
- * Extract email from cell value
- * Handles cases where cell contains both name and email
+ * Extract emails from cell value (now supports multiple emails)
+ * Handles cases where cell contains both name and email, and multiple emails
  * Examples:
- * - "tiar.agisti@gmail.com" -> "tiar.agisti@gmail.com"
- * - "John Doe <john@example.com>" -> "john@example.com"
- * - Multiple emails separated by comma or semicolon -> take first one
+ * - "tiar.agisti@gmail.com" -> ["tiar.agisti@gmail.com"]
+ * - "tiar@gmail.com; john@gmail.com" -> ["tiar@gmail.com", "john@gmail.com"]
+ * - "John Doe <john@example.com>; Jane <jane@example.com>" -> ["john@example.com", "jane@example.com"]
  */
 function extractEmail(cellValue) {
-    if (!cellValue) return '';
+    if (!cellValue) return [];
 
     const value = String(cellValue).trim();
-    if (!value) return '';
+    if (!value) return [];
 
-    // Check if value contains email pattern
-    const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
-    const matches = value.match(emailRegex);
+    // Split by semicolon first to handle multiple emails
+    const emailParts = value.split(';').map(part => part.trim()).filter(part => part);
+    const extractedEmails = [];
 
-    if (matches && matches.length > 0) {
-        // Return first email found
-        return matches[0].toLowerCase();
+    for (const part of emailParts) {
+        // Check if part contains email pattern
+        const emailRegex = /([a-zA-Z0-9._-]+@[a-zA-Z0-9._-]+\.[a-zA-Z0-9_-]+)/gi;
+        const matches = part.match(emailRegex);
+
+        if (matches && matches.length > 0) {
+            // Add all emails found in this part
+            matches.forEach(email => {
+                const cleanEmail = email.toLowerCase().trim();
+                if (cleanEmail && !extractedEmails.includes(cleanEmail)) {
+                    extractedEmails.push(cleanEmail);
+                }
+            });
+        } else if (part.includes('@')) {
+            // If no regex match but contains @, try to use it as email
+            const cleanEmail = part.toLowerCase().trim();
+            if (cleanEmail && !extractedEmails.includes(cleanEmail)) {
+                extractedEmails.push(cleanEmail);
+            }
+        }
     }
 
-    // If no email pattern found, return original value if it looks like an email
-    if (value.includes('@')) {
-        return value.toLowerCase();
-    }
-
-    return '';
+    return extractedEmails;
 }
 
 /**

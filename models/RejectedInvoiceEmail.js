@@ -7,7 +7,7 @@ const rejectedInvoiceEmailSchema = new mongoose.Schema({
         unique: true,
         trim: true
     },
-    email_main_pic: {
+    email_main_pic: [{
         type: String,
         trim: true,
         validate: {
@@ -16,8 +16,8 @@ const rejectedInvoiceEmailSchema = new mongoose.Schema({
             },
             message: 'Please enter a valid email address for Main PIC'
         }
-    },
-    email_comm: {
+    }],
+    email_comm: [{
         type: String,
         trim: true,
         validate: {
@@ -26,8 +26,8 @@ const rejectedInvoiceEmailSchema = new mongoose.Schema({
             },
             message: 'Please enter a valid email address for Communication'
         }
-    },
-    email_comm_manager: {
+    }],
+    email_comm_manager: [{
         type: String,
         trim: true,
         validate: {
@@ -36,8 +36,8 @@ const rejectedInvoiceEmailSchema = new mongoose.Schema({
             },
             message: 'Please enter a valid email address for Communication Manager'
         }
-    },
-    email_milist_com: {
+    }],
+    email_milist_com: [{
         type: String,
         trim: true,
         validate: {
@@ -46,8 +46,8 @@ const rejectedInvoiceEmailSchema = new mongoose.Schema({
             },
             message: 'Please enter a valid email address for Mailing List Communication'
         }
-    },
-    email_finance: {
+    }],
+    email_finance: [{
         type: String,
         trim: true,
         validate: {
@@ -56,7 +56,7 @@ const rejectedInvoiceEmailSchema = new mongoose.Schema({
             },
             message: 'Please enter a valid email address for Finance'
         }
-    },
+    }],
     createdAt: {
         type: Date,
         default: Date.now

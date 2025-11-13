@@ -400,26 +400,59 @@ exports.rejectInvoice = async (req, res) => {
             console.info("First 200 chars of HTML:", emailHtml.substring(0, 200) + "...");
           }
 
-          // Prepare email recipients
+          // Prepare email recipients (handle arrays)
           const toEmails = [];
           const ccEmails = [];
 
-          // Add TO recipients (email_main_pic and email_comm)
-          if (emailConfig.email_main_pic) {
+          // Add TO recipients (email_main_pic and email_comm arrays)
+          if (Array.isArray(emailConfig.email_main_pic)) {
+            emailConfig.email_main_pic.forEach(email => {
+              if (email && email.trim() && !toEmails.includes(email.trim())) {
+                toEmails.push(email.trim());
+              }
+            });
+          } else if (emailConfig.email_main_pic) {
             toEmails.push(emailConfig.email_main_pic);
           }
-          if (emailConfig.email_comm && emailConfig.email_comm !== emailConfig.email_main_pic) {
+
+          if (Array.isArray(emailConfig.email_comm)) {
+            emailConfig.email_comm.forEach(email => {
+              if (email && email.trim() && !toEmails.includes(email.trim())) {
+                toEmails.push(email.trim());
+              }
+            });
+          } else if (emailConfig.email_comm && !toEmails.includes(emailConfig.email_comm)) {
             toEmails.push(emailConfig.email_comm);
           }
 
-          // Add CC recipients (email_comm_manager, email_milist_com, email_finance)
-          if (emailConfig.email_comm_manager) {
+          // Add CC recipients (email_comm_manager, email_milist_com, email_finance arrays)
+          if (Array.isArray(emailConfig.email_comm_manager)) {
+            emailConfig.email_comm_manager.forEach(email => {
+              if (email && email.trim() && !ccEmails.includes(email.trim())) {
+                ccEmails.push(email.trim());
+              }
+            });
+          } else if (emailConfig.email_comm_manager) {
             ccEmails.push(emailConfig.email_comm_manager);
           }
-          if (emailConfig.email_milist_com && !ccEmails.includes(emailConfig.email_milist_com)) {
+
+          if (Array.isArray(emailConfig.email_milist_com)) {
+            emailConfig.email_milist_com.forEach(email => {
+              if (email && email.trim() && !ccEmails.includes(email.trim())) {
+                ccEmails.push(email.trim());
+              }
+            });
+          } else if (emailConfig.email_milist_com && !ccEmails.includes(emailConfig.email_milist_com)) {
             ccEmails.push(emailConfig.email_milist_com);
           }
-          if (emailConfig.email_finance && !ccEmails.includes(emailConfig.email_finance)) {
+
+          if (Array.isArray(emailConfig.email_finance)) {
+            emailConfig.email_finance.forEach(email => {
+              if (email && email.trim() && !ccEmails.includes(email.trim())) {
+                ccEmails.push(email.trim());
+              }
+            });
+          } else if (emailConfig.email_finance && !ccEmails.includes(emailConfig.email_finance)) {
             ccEmails.push(emailConfig.email_finance);
           }
 

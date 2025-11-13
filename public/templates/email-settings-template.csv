@@ -1,0 +1,3 @@
+accountID,email_main_pic,email_comm,email_comm_manager,email_milist_com,email_finance
+SAMPLE001,mainpic1@company.com;mainpic2@company.com,communication@company.com,manager1@company.com;manager2@company.com,mailinglist@company.com,finance1@company.com;finance2@company.com
+SAMPLE002,pic@example.com,comm@example.com;support@example.com,commmanager@example.com,list@example.com;newsletter@example.com,finance@example.com
