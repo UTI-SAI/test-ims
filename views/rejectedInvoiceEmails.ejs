@@ -18,11 +18,11 @@
                     this.config = {
                         _id: '',
                         accountID: '',
-                        email_main_pic: '',
-                        email_comm: '',
-                        email_comm_manager: '',
-                        email_milist_com: '',
-                        email_finance: ''
+                        email_main_pic: [''],
+                        email_comm: [''],
+                        email_comm_manager: [''],
+                        email_milist_com: [''],
+                        email_finance: ['']
                     };
                     this.isEditMode = false;
                 },
@@ -40,7 +40,15 @@
                         const result = await response.json();
 
                         if (result.success) {
-                            this.config = result.data;
+                            // Ensure arrays for email fields
+                            this.config = {
+                                ...result.data,
+                                email_main_pic: Array.isArray(result.data.email_main_pic) ? result.data.email_main_pic : (result.data.email_main_pic ? [result.data.email_main_pic] : []),
+                                email_comm: Array.isArray(result.data.email_comm) ? result.data.email_comm : (result.data.email_comm ? [result.data.email_comm] : []),
+                                email_comm_manager: Array.isArray(result.data.email_comm_manager) ? result.data.email_comm_manager : (result.data.email_comm_manager ? [result.data.email_comm_manager] : []),
+                                email_milist_com: Array.isArray(result.data.email_milist_com) ? result.data.email_milist_com : (result.data.email_milist_com ? [result.data.email_milist_com] : []),
+                                email_finance: Array.isArray(result.data.email_finance) ? result.data.email_finance : (result.data.email_finance ? [result.data.email_finance] : [])
+                            };
                             this.isEditMode = true;
                             this.showModal = true;
                         } else {
@@ -299,14 +307,76 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
-                                            <label class="form-label">Main PIC Email</label>
-                                            <input type="email" class="form-control" x-model="config.email_main_pic"
-                                                placeholder="Enter main PIC email address">
+                                            <label class="form-label">Main PIC Email(s)</label>
+                                            <div class="space-y-2">
+                                                <template x-for="(email, index) in config.email_main_pic" :key="index">
+                                                    <div class="input-group mb-2">
+                                                        <input type="email" class="form-control"
+                                                            x-model="config.email_main_pic[index]"
+                                                            placeholder="Enter main PIC email address">
+                                                        <button class="btn btn-outline-danger" type="button"
+                                                            @click="config.email_main_pic.splice(index, 1)"
+                                                            x-show="config.email_main_pic.length > 1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon"
+                                                                width="16" height="16" viewBox="0 0 24 24"
+                                                                stroke-width="2" stroke="currentColor" fill="none"
+                                                                stroke-linecap="round" stroke-linejoin="round">
+                                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                                @click="config.email_main_pic.push('')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16"
+                                                    height="16" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" fill="none" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                </svg>
+                                                Add Email
+                                            </button>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">Communication Email</label>
-                                            <input type="email" class="form-control" x-model="config.email_comm"
-                                                placeholder="Enter communication email address">
+                                            <label class="form-label">Communication Email(s)</label>
+                                            <div class="space-y-2">
+                                                <template x-for="(email, index) in config.email_comm" :key="index">
+                                                    <div class="input-group mb-2">
+                                                        <input type="email" class="form-control"
+                                                            x-model="config.email_comm[index]"
+                                                            placeholder="Enter communication email address">
+                                                        <button class="btn btn-outline-danger" type="button"
+                                                            @click="config.email_comm.splice(index, 1)"
+                                                            x-show="config.email_comm.length > 1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon"
+                                                                width="16" height="16" viewBox="0 0 24 24"
+                                                                stroke-width="2" stroke="currentColor" fill="none"
+                                                                stroke-linecap="round" stroke-linejoin="round">
+                                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                                @click="config.email_comm.push('')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16"
+                                                    height="16" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" fill="none" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                </svg>
+                                                Add Email
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -324,19 +394,114 @@
                                     </div>
                                     <div class="card-body">
                                         <div class="mb-3">
-                                            <label class="form-label">Communication Manager Email</label>
-                                            <input type="email" class="form-control" x-model="config.email_comm_manager"
-                                                placeholder="Enter communication manager email">
+                                            <label class="form-label">Communication Manager Email(s)</label>
+                                            <div class="space-y-2">
+                                                <template x-for="(email, index) in config.email_comm_manager"
+                                                    :key="index">
+                                                    <div class="input-group mb-2">
+                                                        <input type="email" class="form-control"
+                                                            x-model="config.email_comm_manager[index]"
+                                                            placeholder="Enter communication manager email">
+                                                        <button class="btn btn-outline-danger" type="button"
+                                                            @click="config.email_comm_manager.splice(index, 1)"
+                                                            x-show="config.email_comm_manager.length > 1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon"
+                                                                width="16" height="16" viewBox="0 0 24 24"
+                                                                stroke-width="2" stroke="currentColor" fill="none"
+                                                                stroke-linecap="round" stroke-linejoin="round">
+                                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                                @click="config.email_comm_manager.push('')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16"
+                                                    height="16" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" fill="none" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                </svg>
+                                                Add Email
+                                            </button>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">Mailing List Communication Email</label>
-                                            <input type="email" class="form-control" x-model="config.email_milist_com"
-                                                placeholder="Enter mailing list communication email">
+                                            <label class="form-label">Mailing List Communication Email(s)</label>
+                                            <div class="space-y-2">
+                                                <template x-for="(email, index) in config.email_milist_com"
+                                                    :key="index">
+                                                    <div class="input-group mb-2">
+                                                        <input type="email" class="form-control"
+                                                            x-model="config.email_milist_com[index]"
+                                                            placeholder="Enter mailing list communication email">
+                                                        <button class="btn btn-outline-danger" type="button"
+                                                            @click="config.email_milist_com.splice(index, 1)"
+                                                            x-show="config.email_milist_com.length > 1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon"
+                                                                width="16" height="16" viewBox="0 0 24 24"
+                                                                stroke-width="2" stroke="currentColor" fill="none"
+                                                                stroke-linecap="round" stroke-linejoin="round">
+                                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                                @click="config.email_milist_com.push('')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16"
+                                                    height="16" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" fill="none" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                </svg>
+                                                Add Email
+                                            </button>
                                         </div>
                                         <div class="mb-3">
-                                            <label class="form-label">Finance Email</label>
-                                            <input type="email" class="form-control" x-model="config.email_finance"
-                                                placeholder="Enter finance email address">
+                                            <label class="form-label">Finance Email(s)</label>
+                                            <div class="space-y-2">
+                                                <template x-for="(email, index) in config.email_finance" :key="index">
+                                                    <div class="input-group mb-2">
+                                                        <input type="email" class="form-control"
+                                                            x-model="config.email_finance[index]"
+                                                            placeholder="Enter finance email address">
+                                                        <button class="btn btn-outline-danger" type="button"
+                                                            @click="config.email_finance.splice(index, 1)"
+                                                            x-show="config.email_finance.length > 1">
+                                                            <svg xmlns="http://www.w3.org/2000/svg" class="icon"
+                                                                width="16" height="16" viewBox="0 0 24 24"
+                                                                stroke-width="2" stroke="currentColor" fill="none"
+                                                                stroke-linecap="round" stroke-linejoin="round">
+                                                                <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                                <line x1="18" y1="6" x2="6" y2="18" />
+                                                                <line x1="6" y1="6" x2="18" y2="18" />
+                                                            </svg>
+                                                        </button>
+                                                    </div>
+                                                </template>
+                                            </div>
+                                            <button type="button" class="btn btn-outline-primary btn-sm"
+                                                @click="config.email_finance.push('')">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16"
+                                                    height="16" viewBox="0 0 24 24" stroke-width="2"
+                                                    stroke="currentColor" fill="none" stroke-linecap="round"
+                                                    stroke-linejoin="round">
+                                                    <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                                    <line x1="12" y1="5" x2="12" y2="19" />
+                                                    <line x1="5" y1="12" x2="19" y2="12" />
+                                                </svg>
+                                                Add Email
+                                            </button>
                                         </div>
                                     </div>
                                 </div>
@@ -397,16 +562,32 @@
                             </h4>
                             <div class="text-muted">
                                 <p class="mb-2">Your Excel file should have the following columns:</p>
-                                <ul class="mb-0">
-                                    <li><strong>Column A:</strong> Customer ID (mapped to Account ID)</li>
-                                    <li><strong>Column E:</strong> Email MAIN PIC CS</li>
-                                    <li><strong>Column F:</strong> E-Mail Comm - TO</li>
-                                    <li><strong>Column H:</strong> E-Mail Commercial Manager - CC</li>
-                                    <li><strong>Column I:</strong> Email Milist Comercial - CC</li>
-                                    <li><strong>Column J:</strong> Email Finance - CC</li>
+                                <ul class="mb-2">
+                                    <li><strong>accountID:</strong> Customer/Account unique identifier</li>
+                                    <li><strong>email_main_pic:</strong> Main PIC email addresses</li>
+                                    <li><strong>email_comm:</strong> Communication team emails</li>
+                                    <li><strong>email_comm_manager:</strong> Communication manager emails</li>
+                                    <li><strong>email_milist_com:</strong> Mailing list communication emails</li>
+                                    <li><strong>email_finance:</strong> Finance department emails</li>
                                 </ul>
-                                <p class="mt-2 mb-0"><small>Note: Only email addresses will be imported. Names in cells
-                                        will be ignored.</small></p>
+                                <div class="d-flex align-items-center mb-2">
+                                    <a href="/templates/email-settings-template.xlsx"
+                                        class="btn btn-outline-primary btn-sm" download>
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon" width="16" height="16"
+                                            viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                                            stroke-linecap="round" stroke-linejoin="round">
+                                            <path stroke="none" d="M0 0h24v24H0z" fill="none" />
+                                            <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2 -2v-2" />
+                                            <polyline points="7,11 12,16 17,11" />
+                                            <line x1="12" y1="4" x2="12" y2="16" />
+                                        </svg>
+                                        Download Template
+                                    </a>
+                                    <small class="text-muted ms-2">Use this template to ensure correct format</small>
+                                </div>
+                                <p class="mt-2 mb-0"><small><strong>Note:</strong> For multiple emails in one field,
+                                        separate them with semicolons (;).
+                                        Example: email1@domain.com;email2@domain.com</small></p>
                             </div>
                         </div>
 
