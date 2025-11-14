@@ -21,7 +21,7 @@
                         </td>
                         <td>
                             <div class="space-y-1">
-                                <% if (config.email_main_pic && config.email_main_pic.length> 0) { %>
+                                <% if (Array.isArray(config.email_main_pic) && config.email_main_pic.length> 0) { %>
                                     <% config.email_main_pic.forEach(email=> { %>
                                         <% if (email && email.trim()) { %>
                                             <div class="badge bg-blue-lt mb-1">
@@ -38,7 +38,7 @@
                                             <% } %>
                                                 <% }); %>
                                                     <% } %>
-                                                        <% if (config.email_comm && config.email_comm.length> 0) { %>
+                                                        <% if (Array.isArray(config.email_comm) && config.email_comm.length> 0) { %>
                                                             <% config.email_comm.forEach(email=> { %>
                                                                 <% if (email && email.trim()) { %>
                                                                     <div class="badge bg-green-lt mb-1">
@@ -60,9 +60,9 @@
                                                                     <% } %>
                                                                         <% }); %>
                                                                             <% } %>
-                                                                                <% if ((!config.email_main_pic ||
+                                                                                <% if ((!Array.isArray(config.email_main_pic) ||
                                                                                     config.email_main_pic.length===0) &&
-                                                                                    (!config.email_comm ||
+                                                                                    (!Array.isArray(config.email_comm) ||
                                                                                     config.email_comm.length===0)) { %>
                                                                                     <span class="text-muted">No TO
                                                                                         emails</span>
@@ -71,7 +71,7 @@
                         </td>
                         <td>
                             <div class="space-y-1">
-                                <% if (config.email_comm_manager && config.email_comm_manager.length> 0) { %>
+                                <% if (Array.isArray(config.email_comm_manager) && config.email_comm_manager.length> 0) { %>
                                     <% config.email_comm_manager.forEach(email=> { %>
                                         <% if (email && email.trim()) { %>
                                             <div class="badge bg-orange-lt mb-1">
@@ -88,7 +88,7 @@
                                             <% } %>
                                                 <% }); %>
                                                     <% } %>
-                                                        <% if (config.email_milist_com &&
+                                                        <% if (Array.isArray(config.email_milist_com) &&
                                                             config.email_milist_com.length> 0) { %>
                                                             <% config.email_milist_com.forEach(email=> { %>
                                                                 <% if (email && email.trim()) { %>
@@ -111,7 +111,7 @@
                                                                     <% } %>
                                                                         <% }); %>
                                                                             <% } %>
-                                                                                <% if (config.email_finance &&
+                                                                                <% if (Array.isArray(config.email_finance) &&
                                                                                     config.email_finance.length> 0) { %>
                                                                                     <%
                                                                                         config.email_finance.forEach(email=>
@@ -149,15 +149,15 @@
                                                                                                 <% }); %>
                                                                                                     <% } %>
                                                                                                         <% if
-                                                                                                            ((!config.email_comm_manager
+                                                                                                            ((!Array.isArray(config.email_comm_manager)
                                                                                                             ||
                                                                                                             config.email_comm_manager.length===0)
                                                                                                             &&
-                                                                                                            (!config.email_milist_com
+                                                                                                            (!Array.isArray(config.email_milist_com)
                                                                                                             ||
                                                                                                             config.email_milist_com.length===0)
                                                                                                             &&
-                                                                                                            (!config.email_finance
+                                                                                                            (!Array.isArray(config.email_finance)
                                                                                                             ||
                                                                                                             config.email_finance.length===0))
                                                                                                             { %>
