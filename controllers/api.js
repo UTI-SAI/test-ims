@@ -552,7 +552,7 @@ exports.downloadInvoice = async (req, res) => {
     }
 
     console.log('networkPath ', networkPath);
-    const pdfPath = isLocalPath ? networkPath : path.join(networkPath);
+    const pdfPath = isLocalPath ? networkPath : `file:${path.join(networkPath)}`;
 
     // CHeck if path valid to prevent app terminated
     if (!fs.existsSync(pdfPath)) {
