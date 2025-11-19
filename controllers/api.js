@@ -438,96 +438,84 @@ exports.downloadInvoice = async (req, res) => {
     const collection = db.collection('billing');
 
     const billing = await collection.findOne({ _id: new ObjectId(id) });
-
     if (!billing) {
-      res.status(404).json({
-        message: 'Billing not found.',
-      });
+      return res.status(404).json({ message: 'Billing not found.' });
     }
 
+    // Ambil logRPA (optional; dipakai kalau kamu butuh timestamp/metadata)
     const logRPACollection = db.collection('logRPA');
-    const logRPA = await logRPACollection.findOne({ _id: billing.logId });
+    const logRPA = await logRPACollection.findOne({ _id: billing.logId }).catch(() => null);
 
-    // check db logDir first
+    // Coba ambil monthDirPath dari DB logDir dulu
     const LogDirCollection = db.collection('logDir');
-    const logDir = await LogDirCollection.findOne({
-      clNumber: billing.clnumber,
-    });
+    const logDirDoc = await LogDirCollection.findOne({ clNumber: billing.clnumber }).catch(() => null);
 
     let monthDirPath = '';
-    const { customerDownloadHistory = [], clnumber, invoiceno } = billing;
-
-    if (logDir === null) {
-      const logDirResult = await readFile(
-        '\\\\ckb-a0000036932\\Invoice Automation\\logDir.json',
-        'utf8'
-      );
-
-      const logDirList = JSON.parse(logDirResult);
-
-      const { timestamp } = logRPA;
-
-      monthDirPath = logDirList.find(
-        (it) => it.clNumber === clnumber
-      )?.directory;
+    if (logDirDoc && logDirDoc.directory) {
+      monthDirPath = logDirDoc.directory;
     } else {
-      monthDirPath = logDir.directory;
+      // fallback: baca file logDir.json
+      try {
+        const raw = await readFile('\\\\ckb-a0000036932\\Invoice Automation\\logDir.json', 'utf8');
+        const list = JSON.parse(raw);
+        monthDirPath = list.find(it => it.clNumber === billing.clnumber)?.directory || '';
+      } catch (e) {
+        // kalau gagal baca file, biarkan monthDirPath kosong; nanti tetap dicoba path pertama
+        console.warn('[downloadInvoice] fallback logDir.json error:', e?.message);
+      }
     }
 
-    const user = JSON.parse(JSON.stringify(req.user));
-
-    const isExist = customerDownloadHistory.find(
-      (item) => item.email === user.email
-    );
-
-    if (!isExist) {
-      customerDownloadHistory.push({
-        email: user.email,
+    // Catat download history (tahan null safety untuk req.user)
+    const user = JSON.parse(JSON.stringify(req.user || {}));
+    const history = Array.isArray(billing.customerDownloadHistory)
+      ? billing.customerDownloadHistory
+      : [];
+    if (!history.find(h => h.email === (user.email || ''))) {
+      history.push({
+        email: user.email || '',
         date: new Date().toISOString(),
-        name: user.name,
+        name: user.name || '',
+      });
+      await collection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { customerDownloadHistory: history } }
+      );
+    }
+
+    // Tentukan path file PDF yang valid (coba "Result" dulu, lalu "Archive - Paid Invoice")
+    const candidates = [
+      `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+    ];
+
+    // Normalisasi + cek eksistensi
+    let pdfPath = null;
+    for (const p of candidates) {
+      const normalized = path.join(p);
+      if (fs.existsSync(normalized)) {
+        pdfPath = normalized;
+        break;
+      }
+    }
+
+    if (!pdfPath) {
+      return res.json({
+        message: 'Invoice file not exist, please check again later',
       });
     }
 
-    await collection.updateOne(
-      { _id: new ObjectId(id) },
-      {
-        $set: {
-          customerDownloadHistory: customerDownloadHistory,
-        },
-      }
-    );
-
-    let networkPath = `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${clnumber}\\${invoiceno}.pdf`;
-
-    if (billing.billingStatus === 'PAID') {
-      networkPath = `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
-    }
-
-    const pdfPath = path.join(networkPath);
-
-    // CHeck if path valid to prevent app terminated
-    function checkPath(path) {
-      if (!fs.existsSync(path)) {
-        console.log('Path is not valid');
-        console.log(path);
-        return res.json({
-          message: 'Invoice file not exist, please check again later',
-        });
-      }
-    }
-
-    checkPath(pdfPath);
-
+    // Set header no-cache & stream PDF
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
     res.contentType('application/pdf');
-    fs.createReadStream(pdfPath).pipe(res);
+    return fs.createReadStream(pdfPath).pipe(res);
   } catch (e) {
     console.error('error ', e);
-    res.status(404).send('404 Not Found');
+    return res.status(404).send('404 Not Found');
   }
-
-  // return res.redirect(
-  //   `/invoices/${billing.invoiceno}-${billing.logId.toString()}.pdf`
-  // );
 };
 
 exports.createUser = async (req, res) => {
