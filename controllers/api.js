@@ -551,15 +551,43 @@ exports.downloadInvoice = async (req, res) => {
     //   }
     // }
 
-    console.log('networkPath ', networkPath);
     // const pdfPath = isLocalPath ? networkPath : path.join(networkPath);
-    const pdfPath =networkPath;
+    const pdfPath = path.normalize(networkPath);
+    console.log('pdfPath normalized:', pdfPath);
+    console.log('Running user:', process.env.USERNAME || process.env.USER);
+    console.log('Process ID:', process.pid);
+    
+    // Try to access the file with detailed error handling
+    try {
+      const fileExists = fs.existsSync(pdfPath);
+      console.log('File exists check:', fileExists);
+      
+      if (!fileExists) {
+        // Try to read directory to check permissions
+        const dirPath = path.dirname(pdfPath);
+        console.log('Checking directory:', dirPath);
+        try {
+          const files = fs.readdirSync(dirPath);
+          console.log('Directory accessible, files count:', files.length);
+          console.log('Looking for file:', path.basename(pdfPath));
+          const fileFound = files.includes(path.basename(pdfPath));
+          console.log('File found in directory listing:', fileFound);
+        } catch (dirErr) {
+          console.error('Directory access error:', dirErr.message);
+          console.error('Error code:', dirErr.code);
+        }
+      }
+    } catch (err) {
+      console.error('File access error:', err.message);
+      console.error('Error code:', err.code);
+    }
 
     // CHeck if path valid to prevent app terminated
     if (!fs.existsSync(pdfPath)) {
       console.log('Path is not valid');
+      console.log('Attempted path:', pdfPath);
       return res.json({
-        message: 'Invoice file not exist, please check again later',
+        message: 'Invoice file not exist, please check again later. Please ensure IIS application pool identity has access to the network share.',
       });
     }
 
