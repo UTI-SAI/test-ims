@@ -460,25 +460,25 @@ exports.downloadInvoice = async (req, res) => {
 
     if (logDir === null) {
       // Old hardcoded path - now using environment variables
-      // const logDirResult = await readFile('\\\\ckb-a0000036932\\Invoice Automation\\logDir.json', 'utf8');
+      const logDirResult = await readFile('\\\\ckb-a0000036932\\Invoice Automation\\logDir.json', 'utf8');
 
-      const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
-      const logDirPath = process.env.LOG_DIR_PATH || '\\Invoice Automation\\logDir.json';
+      // const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
+      // const logDirPath = process.env.LOG_DIR_PATH || '\\Invoice Automation\\logDir.json';
 
-      // Check if using local path or network path
-      const isLocalPath = !networkServer.startsWith('\\');
+      // // Check if using local path or network path
+      // const isLocalPath = !networkServer.startsWith('\\');
 
-      let fullLogDirPath;
-      if (isLocalPath) {
-        // Local path relative to project root
-        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
-        fullLogDirPath = path.join(__dirname, '..', '..', networkServer, logDirPath);
-      } else {
-        // Network UNC path
-        fullLogDirPath = `${networkServer}${logDirPath}`;
-      }
+      // let fullLogDirPath;
+      // if (isLocalPath) {
+      //   // Local path relative to project root
+      //   // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
+      //   fullLogDirPath = path.join(__dirname, '..', '..', networkServer, logDirPath);
+      // } else {
+      //   // Network UNC path
+      //   fullLogDirPath = `${networkServer}${logDirPath}`;
+      // }
 
-      const logDirResult = await readFile(fullLogDirPath, 'utf8');
+      // const logDirResult = await readFile(fullLogDirPath, 'utf8');
 
       const logDirList = JSON.parse(logDirResult);
 
@@ -515,44 +515,45 @@ exports.downloadInvoice = async (req, res) => {
     );
 
     // Old hardcoded path - now using environment variables
-    // let networkPath = `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${clnumber}\\${invoiceno}.pdf`;
-    // if (billing.billingStatus === 'PAID') {
-    //   networkPath = `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
-    // }
-
-    // Use environment variables for network paths
-    const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
-    const invoiceResultPath = process.env.INVOICE_RESULT_PATH || '\\Invoice Automation\\7. Result';
-    const archivePaidPath = process.env.ARCHIVE_PAID_PATH || '\\Archive - Paid Invoice';
-
-    // Check if using local path or network path
-    const isLocalPath = !networkServer.startsWith('\\');
-
-    let networkPath;
+    let networkPath = `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${clnumber}\\${invoiceno}.pdf`;
     if (billing.billingStatus === 'PAID') {
-      // For PAID invoices - Archive path
-      if (isLocalPath) {
-        // Local path: ../../CKB-A0000036932/Archive - Paid Invoice/...
-        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
-        networkPath = path.join(__dirname, '..', '..', networkServer, archivePaidPath, monthDirPath, clnumber, `${invoiceno}.pdf`);
-      } else {
-        // Network path: \\CKB-A0000036932\Archive - Paid Invoice\...
-        networkPath = `${networkServer}${archivePaidPath}\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
-      }
-    } else {
-      // For unpaid invoices - Result path
-      if (isLocalPath) {
-        // Local path: ../../CKB-A0000036932/Invoice Automation/7. Result/...
-        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
-        networkPath = path.join(__dirname, '..', '..', networkServer, invoiceResultPath, clnumber, `${invoiceno}.pdf`);
-      } else {
-        // Network path: \\CKB-A0000036932\Invoice Automation\7. Result\...
-        networkPath = `${networkServer}${invoiceResultPath}\\${clnumber}\\${invoiceno}.pdf`;
-      }
+      networkPath = `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
     }
 
+    // Use environment variables for network paths
+    // const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
+    // const invoiceResultPath = process.env.INVOICE_RESULT_PATH || '\\Invoice Automation\\7. Result';
+    // const archivePaidPath = process.env.ARCHIVE_PAID_PATH || '\\Archive - Paid Invoice';
+
+    // // Check if using local path or network path
+    // const isLocalPath = !networkServer.startsWith('\\');
+
+    // let networkPath;
+    // if (billing.billingStatus === 'PAID') {
+    //   // For PAID invoices - Archive path
+    //   if (isLocalPath) {
+    //     // Local path: ../../CKB-A0000036932/Archive - Paid Invoice/...
+    //     // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
+    //     networkPath = path.join(__dirname, '..', '..', networkServer, archivePaidPath, monthDirPath, clnumber, `${invoiceno}.pdf`);
+    //   } else {
+    //     // Network path: \\CKB-A0000036932\Archive - Paid Invoice\...
+    //     networkPath = `${networkServer}${archivePaidPath}\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
+    //   }
+    // } else {
+    //   // For unpaid invoices - Result path
+    //   if (isLocalPath) {
+    //     // Local path: ../../CKB-A0000036932/Invoice Automation/7. Result/...
+    //     // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
+    //     networkPath = path.join(__dirname, '..', '..', networkServer, invoiceResultPath, clnumber, `${invoiceno}.pdf`);
+    //   } else {
+    //     // Network path: \\CKB-A0000036932\Invoice Automation\7. Result\...
+    //     networkPath = `${networkServer}${invoiceResultPath}\\${clnumber}\\${invoiceno}.pdf`;
+    //   }
+    // }
+
     console.log('networkPath ', networkPath);
-    const pdfPath = isLocalPath ? networkPath : `file:${path.join(networkPath)}`;
+    // const pdfPath = isLocalPath ? networkPath : path.join(networkPath);
+    const pdfPath =networkPath;
 
     // CHeck if path valid to prevent app terminated
     if (!fs.existsSync(pdfPath)) {
