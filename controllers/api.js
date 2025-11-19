@@ -466,7 +466,7 @@ exports.downloadInvoice = async (req, res) => {
       const logDirPath = process.env.LOG_DIR_PATH || '\\Invoice Automation\\logDir.json';
 
       // Check if using local path or network path
-      const isLocalPath = !networkServer.startsWith('\\\\');
+      const isLocalPath = !networkServer.startsWith('\\');
 
       let fullLogDirPath;
       if (isLocalPath) {
@@ -526,7 +526,7 @@ exports.downloadInvoice = async (req, res) => {
     const archivePaidPath = process.env.ARCHIVE_PAID_PATH || '\\Archive - Paid Invoice';
 
     // Check if using local path or network path
-    const isLocalPath = !networkServer.startsWith('\\\\');
+    const isLocalPath = !networkServer.startsWith('\\');
 
     let networkPath;
     if (billing.billingStatus === 'PAID') {
