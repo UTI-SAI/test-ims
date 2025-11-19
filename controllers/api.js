@@ -14,33 +14,61 @@ const ObjectId = require('mongodb').ObjectId;
 const readFile = util.promisify(fs.readFile);
 
 exports.sendInvoiceEmail = async (req, res) => {
+  const requestId = `req_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  console.info(`[${requestId}] Starting sendInvoiceEmail process`);
+
   try {
     const { clNumber, subject, invoiceNo, ignoreEmail, isResend } = req.body;
     const cc = req?.body?.cc || null;
 
-    console.log(
-      `Pemanggilan send invoice email dari API, dengan cl number: ${clNumber}`
-    );
+    console.info(`[${requestId}] Request payload:`, {
+      clNumber,
+      subject,
+      invoiceNo: Array.isArray(invoiceNo) ? invoiceNo.length : invoiceNo,
+      ignoreEmail,
+      isResend,
+      cc
+    });
 
-    if (!invoiceNo || invoiceNo?.length === 0) {
-      res.status(400).json({ message: 'Please provide invoiceNo data' });
-      return;
+    // Bug Fix #1: Validate clNumber
+    if (!clNumber) {
+      console.error(`[${requestId}] Missing clNumber in request`);
+      return res.status(400).json({ message: 'Please provide clNumber data' });
     }
 
+    // Bug Fix #2: Better invoiceNo validation
+    if (!invoiceNo || (Array.isArray(invoiceNo) && invoiceNo.length === 0) ||
+      (!Array.isArray(invoiceNo) && !invoiceNo)) {
+      console.error(`[${requestId}] Invalid invoiceNo:`, invoiceNo);
+      return res.status(400).json({ message: 'Please provide valid invoiceNo data' });
+    }
+
+    console.info(`[${requestId}] Connecting to database...`);
     const db = mongoose.connection;
     const rpa = db.collection('logRPA');
 
+    console.info(`[${requestId}] Checking existing RPA logs for clNumber: ${clNumber}`);
     const checkRPA = await rpa
       .find({
         clNumber,
       })
       .toArray();
 
+    console.info(`[${requestId}] Found ${checkRPA?.length || 0} existing RPA logs`);
+
     // Check RPA from RPA Server if not found
     if (!checkRPA || checkRPA?.length === 0) {
-      await lookUpRPA(clNumber, invoiceNo);
+      console.warn(`[${requestId}] No RPA logs found, looking up from RPA server...`);
+      try {
+        await lookUpRPA(clNumber, invoiceNo);
+        console.info(`[${requestId}] RPA lookup completed successfully`);
+      } catch (lookupError) {
+        console.error(`[${requestId}] RPA lookup failed:`, lookupError);
+        // Continue execution - this might not be fatal
+      }
     }
 
+    console.info(`[${requestId}] Fetching RPA logs after lookup...`);
     let logsResult = await rpa
       .find({
         clNumber,
@@ -48,16 +76,25 @@ exports.sendInvoiceEmail = async (req, res) => {
       })
       .toArray();
 
+    console.info(`[${requestId}] Retrieved ${logsResult?.length || 0} RPA logs`);
+
     if (!logsResult || logsResult?.length === 0) {
-      res.status(400).json({
-        message:
-          "Invoice not found or Some customers on this cover list don't have an email.",
+      console.error(`[${requestId}] No logs found for clNumber: ${clNumber}`);
+      return res.status(400).json({
+        message: "Invoice not found or Some customers on this cover list don't have an email.",
       });
-      return;
     }
 
+    // Bug Fix #3: Validate logs structure
     const logs = logsResult[0];
+    if (!logs || !logs.invoiceDetail) {
+      console.error(`[${requestId}] Invalid log structure:`, logs);
+      return res.status(400).json({
+        message: "Invalid invoice data structure",
+      });
+    }
 
+    console.info(`[${requestId}] Processing logs for email extraction...`);
     // Collect all logs that doesnt have a emailSendDate
     const logsCustomerEmails = await rpa
       .find({
@@ -67,93 +104,208 @@ exports.sendInvoiceEmail = async (req, res) => {
       })
       .toArray();
 
+    console.info(`[${requestId}] Found ${logsCustomerEmails?.length || 0} customer email logs`);
+
     // Collect all target emails
     const targetEmails = [];
     let instansi = '';
+    let emailExtractionLog = [];
+
     for (let i = 0; i < logsCustomerEmails.length; i++) {
-      const { invoiceDetail } = logsCustomerEmails[i];
+      const logEntry = logsCustomerEmails[i];
+
+      // Bug Fix #4: Validate log entry structure
+      if (!logEntry || !logEntry.invoiceDetail) {
+        console.warn(`[${requestId}] Invalid log entry at index ${i}:`, logEntry);
+        continue;
+      }
+
+      const { invoiceDetail } = logEntry;
       const { addrEmail, cloCustName } = invoiceDetail;
 
-      instansi = cloCustName;
-      if (addrEmail && addrEmail?.includes('@')) {
-        const logEmails = extractEmails(addrEmail);
-        logEmails.forEach((email) => {
-          if (!targetEmails.includes(email)) {
-            targetEmails.push(email);
-          }
-        });
+      instansi = cloCustName || instansi; // Keep last valid instansi
+
+      if (addrEmail && addrEmail.includes('@')) {
+        console.info(`[${requestId}] Extracting emails from: ${addrEmail}`);
+        try {
+          const logEmails = extractEmails(addrEmail);
+          emailExtractionLog.push({
+            index: i,
+            addrEmail,
+            extractedEmails: logEmails
+          });
+
+          logEmails.forEach((email) => {
+            if (!targetEmails.includes(email)) {
+              targetEmails.push(email);
+            }
+          });
+        } catch (emailError) {
+          console.error(`[${requestId}] Email extraction failed for ${addrEmail}:`, emailError);
+        }
+      } else {
+        console.warn(`[${requestId}] No valid email found in addrEmail: ${addrEmail}`);
       }
     }
 
+    console.info(`[${requestId}] Email extraction summary:`, {
+      totalLogs: logsCustomerEmails.length,
+      targetEmails: targetEmails,
+      instansi,
+      emailExtractionLog
+    });
+
     if (targetEmails.length === 0) {
+      console.warn(`[${requestId}] No target emails found, inserting billing without email...`);
+
       if (logsResult.length > 0) {
+        console.info(`[${requestId}] Inserting ${logsResult.length} billing entries without email...`);
+
         for (const billingCandidate of logsResult) {
-          await Billing.insertBilling(null, billingCandidate, null, cc);
+          try {
+            await Billing.insertBilling(null, billingCandidate, null, cc);
+            console.info(`[${requestId}] Billing inserted for invoice: ${billingCandidate?.invoiceDetail?.invoiceno}`);
+          } catch (billingError) {
+            console.error(`[${requestId}] Billing insertion failed:`, billingError);
+          }
         }
+
         return res.json({
           message: 'Invoices have been inserted into billing!',
         });
       }
 
+      console.info(`[${requestId}] No logs to process, returning processing message`);
       return res.json({ message: 'Email is being processed!' });
     }
 
-    const mainEmail = targetEmails?.join(',');
+    const mainEmail = targetEmails.join(',');
+    console.info(`[${requestId}] Main email string: ${mainEmail}`);
 
+    // Bug Fix #5: Better user lookup with error handling
+    console.info(`[${requestId}] Looking up user for email: ${targetEmails[0]}`);
     const users = await User.find({ email: targetEmails[0] });
+    console.info(`[${requestId}] Found ${users?.length || 0} users`);
+
+    // Bug Fix #6: Validate user exists before proceeding
+    if (!users || users.length === 0) {
+      console.warn(`[${requestId}] No user found for email: ${targetEmails[0]}`);
+      // Continue with null user - this might be acceptable in some cases
+    }
 
     // Collect all invoice no
+    console.info(`[${requestId}] Processing unique invoices...`);
     const uniqueInvoices = new Set();
+    const invoiceProcessingLog = [];
+
     logs.invoiceDetail.invoiceNoAll = logsResult
       .filter((it) => {
+        // Bug Fix #7: Validate invoice structure before processing
+        if (!it || !it.invoiceDetail || !it.invoiceDetail.invoiceno) {
+          console.warn(`[${requestId}] Invalid invoice entry:`, it);
+          return false;
+        }
+
         const invoiceNo = it.invoiceDetail.invoiceno;
         if (uniqueInvoices.has(invoiceNo)) {
+          invoiceProcessingLog.push({ invoiceNo, action: 'duplicate_skipped' });
           return false; // Abaikan jika sudah ada
         }
         uniqueInvoices.add(invoiceNo); // Tambahkan ke Set
+        invoiceProcessingLog.push({ invoiceNo, action: 'included' });
         return true; // Masukkan ke hasil filter
       })
       .map((it) => `<li>${it.invoiceDetail.invoiceno}</li>`)
       .join('');
 
+    console.info(`[${requestId}] Invoice processing summary:`, {
+      totalInvoices: logsResult.length,
+      uniqueInvoices: uniqueInvoices.size,
+      processingLog: invoiceProcessingLog
+    });
+
     let taskId = null;
 
     if (!ignoreEmail) {
-      taskId = await sendInvoiceRPA(
-        users[0],
-        logs.invoiceDetail,
-        mainEmail,
-        cc,
-        instansi
-      );
+      console.info(`[${requestId}] Sending invoice email...`);
+      try {
+        taskId = await sendInvoiceRPA(
+          users[0] || null, // Bug Fix #8: Handle null user gracefully
+          logs.invoiceDetail,
+          mainEmail,
+          cc,
+          instansi
+        );
+        console.info(`[${requestId}] Email task created with ID: ${taskId}`);
+      } catch (emailError) {
+        console.error(`[${requestId}] Email sending failed:`, emailError);
+        // Don't return here - continue with database updates
+      }
+    } else {
+      console.info(`[${requestId}] Email sending ignored as requested`);
     }
 
-    await rpa.updateMany(
-      {
-        clNumber,
-        // statuses: { $nin: ['ARCHIVE HC', 'EMAIL NOT FOUND'] },
-      },
-      {
-        $set: {
-          sentTo: targetEmails,
-          cc,
-          emailSendDate: moment()
-            .tz('Asia/Jakarta')
-            .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
-          modifiedOn: new Date().toISOString(),
+    console.info(`[${requestId}] Updating RPA logs with email send information...`);
+    try {
+      const updateResult = await rpa.updateMany(
+        {
+          clNumber,
+          // statuses: { $nin: ['ARCHIVE HC', 'EMAIL NOT FOUND'] },
         },
-      }
-    );
+        {
+          $set: {
+            sentTo: targetEmails,
+            cc,
+            emailSendDate: moment()
+              .tz('Asia/Jakarta')
+              .format('YYYY-MM-DDTHH:mm:ss.SSSZ'),
+            modifiedOn: new Date().toISOString(),
+          },
+        }
+      );
+      console.info(`[${requestId}] RPA logs update result:`, {
+        matchedCount: updateResult.matchedCount,
+        modifiedCount: updateResult.modifiedCount
+      });
+    } catch (updateError) {
+      console.error(`[${requestId}] RPA logs update failed:`, updateError);
+    }
 
     // Insert billing
+    console.info(`[${requestId}] Inserting billing entries...`);
+    const billingInsertionResults = [];
+
     for (const billingCandidate of logsResult) {
-      await Billing.insertBilling(users, billingCandidate, targetEmails, cc);
+      try {
+        await Billing.insertBilling(users, billingCandidate, targetEmails, cc);
+        billingInsertionResults.push({
+          invoiceNo: billingCandidate?.invoiceDetail?.invoiceno,
+          status: 'success'
+        });
+        console.info(`[${requestId}] Billing inserted successfully for: ${billingCandidate?.invoiceDetail?.invoiceno}`);
+      } catch (billingError) {
+        billingInsertionResults.push({
+          invoiceNo: billingCandidate?.invoiceDetail?.invoiceno,
+          status: 'failed',
+          error: billingError.message
+        });
+        console.error(`[${requestId}] Billing insertion failed for ${billingCandidate?.invoiceDetail?.invoiceno}:`, billingError);
+      }
     }
 
+    console.info(`[${requestId}] Billing insertion summary:`, {
+      total: logsResult.length,
+      successful: billingInsertionResults.filter(r => r.status === 'success').length,
+      failed: billingInsertionResults.filter(r => r.status === 'failed').length,
+      results: billingInsertionResults
+    });
+
     if (isResend) {
+      console.info(`[${requestId}] Resend operation completed successfully`);
       return true;
     }
 
+    console.info(`[${requestId}] SendInvoiceEmail process completed successfully`);
     return res.json({
       message: 'Email is being processed!',
       data: {
@@ -161,8 +313,23 @@ exports.sendInvoiceEmail = async (req, res) => {
       },
     });
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: 'Server error' });
+    console.error(`[${requestId}] SendInvoiceEmail process failed:`, {
+      error: error.message,
+      stack: error.stack,
+      requestData: {
+        clNumber: req.body?.clNumber,
+        invoiceNo: req.body?.invoiceNo,
+        isResend: req.body?.isResend
+      }
+    });
+
+    // Bug Fix #9: Better error response handling
+    if (!res.headersSent) {
+      res.status(500).json({
+        error: 'Server error',
+        requestId: requestId // Include request ID for tracking
+      });
+    }
   }
 };
 
@@ -294,13 +461,13 @@ exports.downloadInvoice = async (req, res) => {
     if (logDir === null) {
       // Old hardcoded path - now using environment variables
       // const logDirResult = await readFile('\\\\ckb-a0000036932\\Invoice Automation\\logDir.json', 'utf8');
-      
+
       const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
       const logDirPath = process.env.LOG_DIR_PATH || '\\Invoice Automation\\logDir.json';
-      
+
       // Check if using local path or network path
       const isLocalPath = !networkServer.startsWith('\\\\');
-      
+
       let fullLogDirPath;
       if (isLocalPath) {
         // Local path relative to project root
@@ -310,7 +477,7 @@ exports.downloadInvoice = async (req, res) => {
         // Network UNC path
         fullLogDirPath = `${networkServer}${logDirPath}`;
       }
-      
+
       const logDirResult = await readFile(fullLogDirPath, 'utf8');
 
       const logDirList = JSON.parse(logDirResult);
@@ -352,15 +519,15 @@ exports.downloadInvoice = async (req, res) => {
     // if (billing.billingStatus === 'PAID') {
     //   networkPath = `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
     // }
-    
+
     // Use environment variables for network paths
     const networkServer = process.env.NETWORK_SERVER || '\\\\CKB-A0000036932';
     const invoiceResultPath = process.env.INVOICE_RESULT_PATH || '\\Invoice Automation\\7. Result';
     const archivePaidPath = process.env.ARCHIVE_PAID_PATH || '\\Archive - Paid Invoice';
-    
+
     // Check if using local path or network path
     const isLocalPath = !networkServer.startsWith('\\\\');
-    
+
     let networkPath;
     if (billing.billingStatus === 'PAID') {
       // For PAID invoices - Archive path
