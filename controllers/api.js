@@ -528,31 +528,28 @@ exports.downloadInvoice = async (req, res) => {
     // Check if using local path or network path
     const isLocalPath = !networkServer.startsWith('\\');
 
-    let networkPath;
+    let pdfPath;
     if (billing.billingStatus === 'PAID') {
       // For PAID invoices - Archive path
       if (isLocalPath) {
         // Local path: ../../CKB-A0000036932/Archive - Paid Invoice/...
-        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
-        networkPath = path.join(__dirname, '..', '..', networkServer, archivePaidPath, monthDirPath, clnumber, `${invoiceno}.pdf`);
+        pdfPath = path.join(__dirname, '..', '..', networkServer, archivePaidPath, monthDirPath, clnumber, `${invoiceno}.pdf`);
       } else {
-        // Network path: \\CKB-A0000036932\Archive - Paid Invoice\...
-        networkPath = `${networkServer}${archivePaidPath}\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
+        // Network UNC path: \\CKB-A0000036932\Archive - Paid Invoice\...
+        pdfPath = `${networkServer}${archivePaidPath}\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
       }
     } else {
       // For unpaid invoices - Result path
       if (isLocalPath) {
         // Local path: ../../CKB-A0000036932/Invoice Automation/7. Result/...
-        // Need to go up 2 levels: controllers -> billing-monitor -> parent folder
-        networkPath = path.join(__dirname, '..', '..', networkServer, invoiceResultPath, clnumber, `${invoiceno}.pdf`);
+        pdfPath = path.join(__dirname, '..', '..', networkServer, invoiceResultPath, clnumber, `${invoiceno}.pdf`);
       } else {
-        // Network path: \\CKB-A0000036932\Invoice Automation\7. Result\...
-        networkPath = `${networkServer}${invoiceResultPath}\\${clnumber}\\${invoiceno}.pdf`;
+        // Network UNC path: \\CKB-A0000036932\Invoice Automation\7. Result\...
+        pdfPath = `${networkServer}${invoiceResultPath}\\${clnumber}\\${invoiceno}.pdf`;
       }
     }
 
-    console.log('networkPath ', networkPath);
-    const pdfPath = isLocalPath ? networkPath : `file:${path.join(networkPath)}`;
+    console.log('pdfPath ', pdfPath);
 
     // CHeck if path valid to prevent app terminated
     if (!fs.existsSync(pdfPath)) {
