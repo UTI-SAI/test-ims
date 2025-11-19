@@ -509,6 +509,7 @@ exports.downloadInvoice = async (req, res) => {
     function checkPath(path) {
       if (!fs.existsSync(path)) {
         console.log('Path is not valid');
+        console.log(path);
         return res.json({
           message: 'Invoice file not exist, please check again later',
         });
