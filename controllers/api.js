@@ -432,7 +432,6 @@ exports.uploadInvoiceFile = async (req, res) => {
 
 exports.downloadInvoice = async (req, res) => {
   const { id } = req.params;
-  const { download } = req.query; // Check if this is a force download request
 
   try {
     const db = mongoose.connection;
@@ -459,10 +458,10 @@ exports.downloadInvoice = async (req, res) => {
     const { customerDownloadHistory = [], clnumber, invoiceno } = billing;
 
     if (logDir === null) {
-      // Using mapped drive Y: directly
-      const fullLogDirPath = 'Y:\\logDir.json';
-
-      const logDirResult = await readFile(fullLogDirPath, 'utf8');
+      const logDirResult = await readFile(
+        '\\\\ckb-a0000036932\\Invoice Automation\\logDir.json',
+        'utf8'
+      );
 
       const logDirList = JSON.parse(logDirResult);
 
@@ -498,56 +497,28 @@ exports.downloadInvoice = async (req, res) => {
       }
     );
 
-    // Use mapped drives directly
-    const networkServer = 'Y:'; // Mapped drive for Invoice Automation
-    const invoiceResultPath = '\\7. Result';
-    const archivePaidPath = 'Z:'; // Mapped drive for Archive - Paid Invoice
+    let networkPath = `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${clnumber}\\${invoiceno}.pdf`;
 
-    // Check if using mapped drive (e.g., Y: or Z:)
-    const isMappedDrive = /^[A-Z]:$/i.test(networkServer);
-    const isArchiveMappedDrive = /^[A-Z]:$/i.test(archivePaidPath);
-
-    let pdfPath;
     if (billing.billingStatus === 'PAID') {
-      // For PAID invoices - Archive path with Z: drive
-      pdfPath = `${archivePaidPath}\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
-    } else {
-      // For unpaid invoices - Result path with Y: drive
-      pdfPath = `${networkServer}${invoiceResultPath}\\${clnumber}\\${invoiceno}.pdf`;
+      networkPath = `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${clnumber}\\${invoiceno}.pdf`;
     }
 
-    pdfPath = path.normalize(pdfPath);
-    console.log('Final pdfPath:', pdfPath);
+    const pdfPath = path.join(networkPath);
 
     // CHeck if path valid to prevent app terminated
-    if (!fs.existsSync(pdfPath)) {
-      console.log('Path is not valid');
-      console.log('Attempted path:', pdfPath);
-      return res.json({
-        message: 'Invoice file not exist.',
-      });
+    function checkPath(path) {
+      if (!fs.existsSync(path)) {
+        console.log('Path is not valid');
+        return res.json({
+          message: 'Invoice file not exist, please check again later',
+        });
+      }
     }
+
+    checkPath(pdfPath);
 
     res.contentType('application/pdf');
-
-    // If download=true (multiple invoices), force download
-    // Otherwise, preview in browser (single invoice)
-    if (download === 'true') {
-      res.setHeader('Content-Disposition', `attachment; filename="${invoiceno}.pdf"`);
-    } else {
-      // Explicitly set inline for preview
-      res.setHeader('Content-Disposition', `inline; filename="${invoiceno}.pdf"`);
-    }
-
-    const stream = fs.createReadStream(pdfPath);
-    stream.on('error', (err) => {
-      console.error('Stream error:', err);
-      if (!res.headersSent) {
-        res.status(500).send('Error reading file');
-      }
-    });
-
-    stream.pipe(res);
+    fs.createReadStream(pdfPath).pipe(res);
   } catch (e) {
     console.error('error ', e);
     res.status(404).send('404 Not Found');
