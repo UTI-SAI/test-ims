@@ -407,7 +407,7 @@ exports.rejectInvoice = async (req, res) => {
           // Add TO recipients (email_main_pic and email_comm arrays)
           if (Array.isArray(emailConfig.email_main_pic)) {
             emailConfig.email_main_pic.forEach(email => {
-              if (email && email.trim() && !toEmails.includes(email.trim())) {
+              if (email && email.trim()) {
                 toEmails.push(email.trim());
               }
             });
@@ -417,18 +417,18 @@ exports.rejectInvoice = async (req, res) => {
 
           if (Array.isArray(emailConfig.email_comm)) {
             emailConfig.email_comm.forEach(email => {
-              if (email && email.trim() && !toEmails.includes(email.trim())) {
+              if (email && email.trim()) {
                 toEmails.push(email.trim());
               }
             });
-          } else if (emailConfig.email_comm && !toEmails.includes(emailConfig.email_comm)) {
+          } else if (emailConfig.email_comm) {
             toEmails.push(emailConfig.email_comm);
           }
 
           // Add CC recipients (email_comm_manager, email_milist_com, email_finance arrays)
           if (Array.isArray(emailConfig.email_comm_manager)) {
             emailConfig.email_comm_manager.forEach(email => {
-              if (email && email.trim() && !ccEmails.includes(email.trim())) {
+              if (email && email.trim()) {
                 ccEmails.push(email.trim());
               }
             });
@@ -438,21 +438,21 @@ exports.rejectInvoice = async (req, res) => {
 
           if (Array.isArray(emailConfig.email_milist_com)) {
             emailConfig.email_milist_com.forEach(email => {
-              if (email && email.trim() && !ccEmails.includes(email.trim())) {
+              if (email && email.trim()) {
                 ccEmails.push(email.trim());
               }
             });
-          } else if (emailConfig.email_milist_com && !ccEmails.includes(emailConfig.email_milist_com)) {
+          } else if (emailConfig.email_milist_com) {
             ccEmails.push(emailConfig.email_milist_com);
           }
 
           if (Array.isArray(emailConfig.email_finance)) {
             emailConfig.email_finance.forEach(email => {
-              if (email && email.trim() && !ccEmails.includes(email.trim())) {
+              if (email && email.trim()) {
                 ccEmails.push(email.trim());
               }
             });
-          } else if (emailConfig.email_finance && !ccEmails.includes(emailConfig.email_finance)) {
+          } else if (emailConfig.email_finance) {
             ccEmails.push(emailConfig.email_finance);
           }
 
@@ -534,7 +534,7 @@ exports.exports = async (req, res) => {
     }
 
     const ids = selectedIds.split(",").map((id) => id.trim());
-    
+
     // Render view for multiple invoice downloads
     return res.render('downloadMultipleInvoices', { ids });
   }
@@ -774,7 +774,7 @@ exports.exportsCustomerBilling = async (req, res) => {
     }
 
     const ids = selectedIds.split(",").map((id) => id.trim());
-    
+
     // Render view for multiple invoice downloads
     return res.render('downloadMultipleInvoices', { ids });
   }
