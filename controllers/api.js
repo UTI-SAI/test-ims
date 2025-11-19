@@ -432,6 +432,7 @@ exports.uploadInvoiceFile = async (req, res) => {
 
 exports.downloadInvoice = async (req, res) => {
   const { id } = req.params;
+  const { download } = req.query; // Check if force download (for multiple invoice downloads)
 
   try {
     const db = mongoose.connection;
@@ -504,13 +505,22 @@ exports.downloadInvoice = async (req, res) => {
       });
     }
 
-    // Set header no-cache & stream PDF
+    // Set header no-cache
     res.set({
       'Cache-Control': 'no-store, no-cache, must-revalidate, private',
       'Pragma': 'no-cache',
       'Expires': '0',
     });
     res.contentType('application/pdf');
+
+    // If download=true (multiple invoices), force download with attachment
+    // Otherwise, preview in browser with inline
+    if (download === 'true') {
+      res.setHeader('Content-Disposition', `attachment; filename="${billing.invoiceno}.pdf"`);
+    } else {
+      res.setHeader('Content-Disposition', `inline; filename="${billing.invoiceno}.pdf"`);
+    }
+
     return fs.createReadStream(pdfPath).pipe(res);
   } catch (e) {
     console.error('error ', e);
