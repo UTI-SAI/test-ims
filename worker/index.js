@@ -12,8 +12,8 @@ const limiter = new Bottleneck({
 });
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.office365.com",
-  port: 587,
+  host: "mail.tmt.co.id ",
+  port: 25,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,

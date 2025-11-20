@@ -4,8 +4,8 @@ const mongoose = require("mongoose");
 const ObjectId = require("mongodb").ObjectId;
 
 const transporter = nodemailer.createTransport({
-  host: "smtp.office365.com",
-  port: 587,
+  host: "mail.tmt.co.id",
+  port: 25,
   secure: false,
   auth: {
     user: process.env.EMAIL_USER,
@@ -26,7 +26,7 @@ const sendEmail = async (emailData) => {
     if (!emailData.cc) {
       emailData.cc = null;
     }
-    
+
     if (process.env.USE_EMAIL_TESTING === "yes") {
       to = process.env.EMAIL_TESTING;
     }
@@ -58,7 +58,7 @@ const sendEmail = async (emailData) => {
 
     // Proses task email segera
     this.processQueue(queue);
-    
+
     return taskId;
   } catch (error) {
     console.error("Couldn't send email:", error);
