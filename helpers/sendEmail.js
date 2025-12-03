@@ -35,7 +35,7 @@ const sendEmail = async (emailData) => {
 
     // Siapkan data email yang akan dikirim
     let mailOptions = {
-      from: `"Billing Monitor" <${process.env.EMAIL_USER}>`,
+      from: `"Billing Support" <${process.env.EMAIL_USER}>`,
       to,
       subject: emailData.subject,
       text: emailData.text,
@@ -74,7 +74,7 @@ exports.processQueue = async (queue) => {
       let data = task?.payload?.data;
 
       await transporter.sendMail({
-        from: `"Billing Monitor" <${process.env.EMAIL_USER}>`,
+        from: `"Billing Support" <${process.env.EMAIL_USER}>`,
         to: data.to,
         subject: data.subject,
         text: data.text,
