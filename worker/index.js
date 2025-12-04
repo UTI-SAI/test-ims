@@ -35,7 +35,7 @@ const sendEmail = (emailData) => {
   }
 
   let mailOptions = {
-    from: `"Billing Monitor" <${process.env.EMAIL_USER}>`,
+    from: `"Billing Support" <${process.env.EMAIL_USER}>`,
     to,
     subject: emailData.subject,
     text: emailData.text,

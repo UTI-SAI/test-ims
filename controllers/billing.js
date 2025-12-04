@@ -3,7 +3,7 @@ const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
 const { createQueryString } = require("../helpers/createQueryString");
 const listFilesInDirectory = require("../helpers/listFilesInDirectory");
-const createCsvWriter = require("csv-writer").createObjectCsvWriter;
+const ExcelJS = require('exceljs');
 const sendEmail = require("../helpers/sendEmail");
 const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoiceEmail");
 
@@ -554,29 +554,34 @@ exports.exports = async (req, res) => {
   }
 
   const epoch = new Date().getTime().toString();
-  const fileName = `./exports/billing-${reportType.toLowerCase()}-${epoch}.csv`;
-  let header = [
-    { id: "accountID", title: "ACCOUNT ID" },
-    { id: "customerName", title: "CUSTOMER NAME" },
-    { id: "clNumber", title: "CL NUMBER" },
-    { id: "clDate", title: "CL DATE" },
-    { id: "invoiceNo", title: "INVOICE NO" },
-    { id: "invoiceDate", title: "INVOICE DATE" },
-    { id: "emailSent", title: "EMAIL SENT" },
-    { id: "emailSendDate", title: "EMAIL SENDING DATE" },
-    { id: "status", title: "STATUS" },
-    { id: "excelSummaryInvoice", title: "EXCEL SUMMARY INVOICE" },
-    { id: "rejectionReason", title: "REASON" },
+  const fileName = `./exports/billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
+  
+  // Create workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Billing Data');
+
+  // Define columns
+  worksheet.columns = [
+    { header: 'ACCOUNT ID', key: 'accountID', width: 15 },
+    { header: 'CUSTOMER NAME', key: 'customerName', width: 30 },
+    { header: 'CL NUMBER', key: 'clNumber', width: 15 },
+    { header: 'CL DATE', key: 'clDate', width: 12 },
+    { header: 'INVOICE NO', key: 'invoiceNo', width: 15 },
+    { header: 'INVOICE DATE', key: 'invoiceDate', width: 12 },
+    { header: 'EMAIL SENT', key: 'emailSent', width: 30 },
+    { header: 'EMAIL SENDING DATE', key: 'emailSendDate', width: 20 },
+    { header: 'STATUS', key: 'status', width: 20 },
+    { header: 'EXCEL SUMMARY INVOICE', key: 'excelSummaryInvoice', width: 50 },
+    { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
   ];
 
-  // if (searchParam.billingStatus === "REJECTED") {
-  // header.push({ id: "rejectionReason", title: "REASON" });
-  // }
-
-  const csvWriter = createCsvWriter({
-    path: fileName,
-    header,
-  });
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFD3D3D3' }
+  };
 
   const flatData = billings.map((item) => ({
     accountID: item.accountID,
@@ -589,12 +594,15 @@ exports.exports = async (req, res) => {
     emailSendDate: moment(item.emailSendDate).format("MM/DD/YYYY HH:mm"),
     status: getBillingStatus(item),
     excelSummaryInvoice: `${HOST}/uploads/${item.excelSummaryInvoice}`,
-    rejectionReason: item.rejectionReason,
+    rejectionReason: item.rejectionReason || '',
   }));
 
-  csvWriter.writeRecords(flatData).then(() => {
-    res.download(fileName);
-  });
+  // Add rows
+  worksheet.addRows(flatData);
+
+  // Write to file and download
+  await workbook.xlsx.writeFile(fileName);
+  res.download(fileName);
 };
 
 const buildBillingSearchQuery = (params) => {
@@ -754,14 +762,7 @@ exports.exportsCustomerBilling = async (req, res) => {
 
   // Filter by account id
   const clonedUser = JSON.parse(JSON.stringify(req.user));
-  if (searchParam.accountID) {
-    searchParam["accountID"] = { $eq: searchParam.accountID };
-  } else {
-    searchParam["accountID"] = { $in: clonedUser.accountID };
-  }
-
-  searchParam["billingStatus"] = { $ne: "CANCELLED" };
-
+  
   let billings = [];
 
   const db = mongoose.connection;
@@ -781,6 +782,13 @@ exports.exportsCustomerBilling = async (req, res) => {
 
   if (reportType === "CURRENT") {
     const query = buildBillingSearchQuery(searchParam);
+    
+    // Add account filter for non-superadmin users
+    if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+      query["accountID"] = { $in: clonedUser.accountID };
+    }
+    
+    query["billingStatus"] = { $ne: "CANCELLED" };
     billings = await collection.find(query).toArray();
   } else if (reportType === "MULTIPLE_ROW") {
     if (!selectedIds) {
@@ -788,34 +796,55 @@ exports.exportsCustomerBilling = async (req, res) => {
     }
 
     const ids = selectedIds.split(",").map((id) => new mongoose.Types.ObjectId(id.trim()));
-    billings = await collection.find({ _id: { $in: ids } }).toArray();
+    const query = { _id: { $in: ids } };
+    
+    // Add account filter for non-superadmin users
+    if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+      query["accountID"] = { $in: clonedUser.accountID };
+    }
+    
+    billings = await collection.find(query).toArray();
   } else {
     const filter = {
-      billingStatus: { $ne: "CANCELLED" },
-      accountID: { $in: clonedUser.accountID },
+      billingStatus: { $ne: "CANCELLED" }
     };
+    
+    // Add account filter for non-superadmin users
+    if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+      filter["accountID"] = { $in: clonedUser.accountID };
+    }
+    
     billings = await collection.find(filter).toArray();
   }
 
   const epoch = new Date().getTime().toString();
-  const fileName = `./exports/user-billing-${reportType.toLowerCase()}-${epoch}.csv`;
+  const fileName = `./exports/user-billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
 
-  const csvWriter = createCsvWriter({
-    path: fileName,
-    header: [
-      { id: "accountID", title: "ACCOUNT ID" },
-      { id: "cloCustName", title: "CUSTOMER NAME" },
-      { id: "clNumber", title: "CL NUMBER" },
-      { id: "clDate", title: "CL DATE" },
-      { id: "invoiceNo", title: "INVOICE NO" },
-      { id: "invoiceDate", title: "INVOICE DATE" },
-      { id: "downloadInvoice", title: "DOWNLOAD INVOICE" },
-      { id: "emailSendDate", title: "EMAIL SEND DATE" },
-      { id: "status", title: "STATUS" },
-    ],
-  });
+  // Create workbook and worksheet
+  const workbook = new ExcelJS.Workbook();
+  const worksheet = workbook.addWorksheet('Customer Billing');
 
-  console.log(billings);
+  // Define columns
+  worksheet.columns = [
+    { header: 'ACCOUNT ID', key: 'accountID', width: 15 },
+    { header: 'CUSTOMER NAME', key: 'cloCustName', width: 30 },
+    { header: 'CL NUMBER', key: 'clNumber', width: 15 },
+    { header: 'CL DATE', key: 'clDate', width: 12 },
+    { header: 'INVOICE NO', key: 'invoiceNo', width: 15 },
+    { header: 'INVOICE DATE', key: 'invoiceDate', width: 12 },
+    { header: 'DOWNLOAD INVOICE', key: 'downloadInvoice', width: 50 },
+    { header: 'EMAIL SEND DATE', key: 'emailSendDate', width: 20 },
+    { header: 'STATUS', key: 'status', width: 20 },
+    { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
+  ];
+
+  // Style header row
+  worksheet.getRow(1).font = { bold: true };
+  worksheet.getRow(1).fill = {
+    type: 'pattern',
+    pattern: 'solid',
+    fgColor: { argb: 'FFD3D3D3' }
+  };
 
   const flatData = billings.map((item) => ({
     accountID: item.accountID,
@@ -829,10 +858,14 @@ exports.exportsCustomerBilling = async (req, res) => {
       ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm")
       : "-",
     status: getBillingStatus(item),
+    rejectionReason: item.rejectionReason || '',
   }));
 
-  csvWriter.writeRecords(flatData).then(() => {
-    res.download(fileName);
-  });
+  // Add rows
+  worksheet.addRows(flatData);
+
+  // Write to file and download
+  await workbook.xlsx.writeFile(fileName);
+  res.download(fileName);
 };
 
