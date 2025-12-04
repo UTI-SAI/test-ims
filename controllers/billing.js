@@ -556,7 +556,7 @@ exports.exports = async (req, res) => {
   const epoch = new Date().getTime().toString();
   const fileName = `./exports/billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
   
-  // Create workbook and worksheet excel
+  // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
   const worksheet = workbook.addWorksheet('Billing Data');
 
