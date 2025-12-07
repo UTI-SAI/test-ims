@@ -673,13 +673,25 @@ const buildBillingSearchQuery = (params) => {
   }
 
   if (invoiceDate) {
-    const [start, end] = invoiceDate.split(" - ");
-    const startDate = new Date(`${start}T00:00:00.000Z`);
-    const endDate = new Date(`${end}T23:59:59.999Z`);
-    query["invoice.invdate"] = {
-      $gte: startDate,
-      $lt: endDate,
-    };
+    // Check if invoiceDate is a range (contains " - ") or single date
+    if (invoiceDate.includes(" - ")) {
+      // Handle range format: "2024-01-01 - 2024-01-31"
+      const [start, end] = invoiceDate.split(" - ");
+      const startDate = new Date(`${start}T00:00:00.000Z`);
+      const endDate = new Date(`${end}T23:59:59.999Z`);
+      query["invoice.invdate"] = {
+        $gte: startDate,
+        $lt: endDate,
+      };
+    } else {
+      // Handle single date format: "2024-01-01"
+      const startDate = new Date(`${invoiceDate}T00:00:00.000Z`);
+      const endDate = new Date(`${invoiceDate}T23:59:59.999Z`);
+      query["invoice.invdate"] = {
+        $gte: startDate,
+        $lt: endDate,
+      };
+    }
   }
 
   if (emailSentDate) {
