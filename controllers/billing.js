@@ -88,8 +88,16 @@ exports.fetchCustomerBilling = async (req, res) => {
         $regex: customerName,
         $options: "i",
       };
-    if (clNumber) query["clnumber"] = clNumber;
-    if (invoiceNo) query["invoiceno"] = invoiceNo;
+    if (clNumber) 
+      query["invoice.clnumber"] = {
+        $regex: clNumber,
+        $options: "i",
+      };
+    if (invoiceNo) 
+      query["invoice.invoiceno"] = {
+        $regex: invoiceNo,
+        $options: "i",
+      };
     if (clDate) {
       const startDate = new Date(`${clDate}T00:00:00.000Z`);
       const endDate = new Date(`${clDate}T23:59:59.999Z`);

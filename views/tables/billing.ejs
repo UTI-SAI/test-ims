@@ -2,6 +2,7 @@
     x-data="{
         selectedItems: JSON.parse(localStorage.getItem('selectedItems') || '[]'),
         selectAll: false,
+        isLoadingAllPages: false,
 
         toggleSelectAll() {
             const allCheckboxes = [...document.querySelectorAll('.select-item')];
@@ -18,6 +19,53 @@
                 allCheckboxes.forEach(el => el.checked = false);
             }
             this.syncStorage();
+        },
+
+        async selectAllPages() {
+            if (this.isLoadingAllPages) return;
+            
+            this.isLoadingAllPages = true;
+            try {
+                // Get current query string
+                const urlParams = new URLSearchParams(window.location.search);
+                urlParams.delete('page'); // Remove page parameter to get all results
+                urlParams.delete('pageSize'); // Remove pageSize parameter
+                
+                // Fetch all billing IDs
+                const response = await fetch(`/api/billing/all-ids?${urlParams.toString()}`);
+                if (!response.ok) throw new Error('Failed to fetch all IDs');
+                
+                const data = await response.json();
+                
+                // Merge with existing selections (remove duplicates)
+                const allIds = [...new Set([...this.selectedItems, ...data.ids])];
+                this.selectedItems = allIds;
+                
+                // Check all visible checkboxes
+                const allCheckboxes = [...document.querySelectorAll('.select-item')];
+                allCheckboxes.forEach(el => el.checked = true);
+                this.selectAll = true;
+                
+                this.syncStorage();
+                
+                Swal.fire({
+                    icon: 'success',
+                    title: 'All Pages Selected!',
+                    html: `<b>${data.ids.length}</b> items from all pages selected<br>Total: <b>${this.selectedItems.length}</b> items`,
+                    timer: 3000,
+                    showConfirmButton: false
+                });
+            } catch (error) {
+                console.error('Error selecting all pages:', error);
+                Swal.fire({
+                    icon: 'error',
+                    title: 'Failed to Select All Pages',
+                    text: 'Please try again.',
+                    confirmButtonText: 'OK'
+                });
+            } finally {
+                this.isLoadingAllPages = false;
+            }
         },
 
         updateSelectAll() {
@@ -74,15 +122,26 @@
 
     <div class="table-responsive">
         <div class="text-muted p-2 mt-2">
-            <div>
-                <span x-text="`${selectedItems.length} selected`"></span>
+            <div class="d-flex justify-content-between align-items-center">
+                <div>
+                    <span x-text="`${selectedItems.length} selected`"></span>
+                </div>
+                <div>
+                    <button class="btn btn-sm btn-primary" 
+                            @click="selectAllPages()"
+                            :disabled="isLoadingAllPages"
+                            type="button">
+                        <span x-show="!isLoadingAllPages">Select All Pages (<%= totalBilling %> items)</span>
+                        <span x-show="isLoadingAllPages">Loading...</span>
+                    </button>
+                    <button class="btn btn-sm btn-outline-danger" 
+                            x-show="selectedItems.length > 0" 
+                            @click="clearAllSelections()"
+                            type="button">
+                        Clear All
+                    </button>
+                </div>
             </div>
-            <button class="btn btn-sm btn-outline-danger mt-1" 
-                    x-show="selectedItems.length > 0" 
-                    @click="clearAllSelections()"
-                    type="button">
-                Clear All
-            </button>
         </div>
         <table class="table table-vcenter">
             <thead>
@@ -90,7 +149,10 @@
                     <th class="text-center">
                         <input type="checkbox" id="select-all"
                             x-model="selectAll"
-                            @change="toggleSelectAll">
+                            @change="toggleSelectAll"
+                            title="Select all items on this page">
+                        <br>
+                        <small class="text-muted" style="font-size: 0.7rem; font-weight: normal;">This Page</small>
                     </th>
                     <th>Account ID</th>
                     <th>Customer Name</th>
@@ -160,15 +222,17 @@
                             <% if (bill.customerDownloadHistory.length> 0) { %>
                                 <ul style="text-align: left;">
                                     <% for (const file of bill.customerDownloadHistory) { %>
+                                        <% if (file.email !== 'super@admin.com') { %>
                                         <li>
                                             <small><code><%= file.email %> - </code></small>
                                             <small><code><%= moment(file.date).format("MM/DD/YYYY") %></code></small>
                                         </li>
                                         <% } %>
-                                </ul>
-                                <% } else { %>
-                                    Not Downloaded Yet
                                     <% } %>
+                                </ul>
+                            <% } else { %>
+                                Not Downloaded Yet
+                            <% } %>
                         </td>
                         <td class="text-muted">
                             <% bill?.sentTo?.forEach(function(address) { %>
