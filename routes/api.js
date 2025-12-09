@@ -142,6 +142,18 @@ router.post(
   apiController.resendBillingEmail
 );
 
+router.get(
+  "/billing/all-ids",
+  ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
+  apiController.getAllBillingIds
+);
+
+router.get(
+  "/customer-billing/all-ids",
+  ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.USER),
+  apiController.getAllCustomerBillingIds
+);
+
 router.post("/users/create", apiController.createUser);
 
 module.exports = router;
