@@ -207,11 +207,13 @@
                             <br>
                             <ul style="text-align: left;">
                                 <% for (const file of bill.customerDownloadHistory) { %>
-                                    <li>
-                                        <small><code><%= file.email %> - </code></small>
-                                        <small><code><%= moment(file.date).format("MM/DD/YYYY") %></code></small>
-                                    </li>
+                                    <% if (file.email !== 'super@admin.com') { %>
+                                        <li>
+                                            <small><code><%= file.email %> - </code></small>
+                                            <small><code><%= moment(file.date).format("MM/DD/YYYY") %></code></small>
+                                        </li>
                                     <% } %>
+                                <% } %>
                             </ul>
                         </td>
                         <td class="text-muted text-center">
