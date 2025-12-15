@@ -1,8 +1,6 @@
 const moment = require("moment");
 const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
-const path = require("path");
-const fs = require("fs");
 const { createQueryString } = require("../helpers/createQueryString");
 const listFilesInDirectory = require("../helpers/listFilesInDirectory");
 const ExcelJS = require('exceljs');
@@ -658,14 +656,8 @@ exports.exports = async (req, res) => {
       billings = await collection.find().toArray();
     }
 
-    // Ensure exports directory exists
-    const exportsDir = path.join(process.cwd(), 'exports');
-    if (!fs.existsSync(exportsDir)) {
-      fs.mkdirSync(exportsDir, { recursive: true });
-    }
-
     const epoch = new Date().getTime().toString();
-    const fileName = path.join(exportsDir, `billing-${reportType.toLowerCase()}-${epoch}.xlsx`);
+    const fileName = `billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
   
   // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
@@ -730,9 +722,14 @@ exports.exports = async (req, res) => {
   // Add rows
   worksheet.addRows(flatData);
 
-  // Write to file and download
-  await workbook.xlsx.writeFile(fileName);
-  res.download(fileName);
+  // Write to buffer and stream to response (no file system required)
+  const buffer = await workbook.xlsx.writeBuffer();
+  
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.setHeader('Content-Length', buffer.length);
+  
+  res.send(buffer);
   } catch (error) {
     console.error('Error in exports():', error);
     console.error('Stack trace:', error.stack);
@@ -989,14 +986,8 @@ exports.exportsCustomerBilling = async (req, res) => {
       billings = await collection.find(filter).toArray();
     }
 
-    // Ensure exports directory exists
-    const exportsDir = path.join(process.cwd(), 'exports');
-    if (!fs.existsSync(exportsDir)) {
-      fs.mkdirSync(exportsDir, { recursive: true });
-    }
-
     const epoch = new Date().getTime().toString();
-    const fileName = path.join(exportsDir, `user-billing-${reportType.toLowerCase()}-${epoch}.xlsx`);
+    const fileName = `user-billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
 
   // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
@@ -1058,9 +1049,14 @@ exports.exportsCustomerBilling = async (req, res) => {
   // Add rows
   worksheet.addRows(flatData);
 
-  // Write to file and download
-  await workbook.xlsx.writeFile(fileName);
-  res.download(fileName);
+  // Write to buffer and stream to response (no file system required)
+  const buffer = await workbook.xlsx.writeBuffer();
+  
+  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+  res.setHeader('Content-Length', buffer.length);
+  
+  res.send(buffer);
   } catch (error) {
     console.error('Error in exportsCustomerBilling():', error);
     console.error('Stack trace:', error.stack);
