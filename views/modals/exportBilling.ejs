@@ -162,20 +162,76 @@ document.addEventListener("DOMContentLoaded", () => {
     // Initialize on load
     updateExportState();
 
-    // Handle form submission - clear selections for multiple selection exports
+    // Handle form submission - use POST to avoid URL length limits
     const exportForm = document.querySelector("#modal-export-billing form");
     const exportSubmitBtn = document.getElementById("exportSubmitBtn");
     
-    if (exportSubmitBtn) {
-        exportSubmitBtn.addEventListener("click", function(e) {
-            // Get selected report type
-            const selectedReportType = exportForm.querySelector('input[name="reportType"]:checked');
+    if (exportForm && exportSubmitBtn) {
+        exportForm.addEventListener("submit", async function(e) {
+            e.preventDefault(); // Prevent default form submission
             
-            if (selectedReportType && 
-                (selectedReportType.value === 'MULTIPLE_INVOICE' || 
-                 selectedReportType.value === 'MULTIPLE_ROW')) {
-                // Clear selections after a short delay to allow form submission
-                setTimeout(function() {
+            // Get form data
+            const formData = new FormData(exportForm);
+            const reportType = formData.get('reportType');
+            const queryString = formData.get('queryString');
+            const selectedIds = formData.get('selectedIds');
+            
+            // Validate report type selection
+            if (!reportType) {
+                Swal.fire({
+                    icon: "warning",
+                    title: "No Export Type Selected",
+                    text: "Please select an export type.",
+                    confirmButtonText: "OK",
+                });
+                return;
+            }
+            
+            try {
+                // Show loading indicator
+                exportSubmitBtn.disabled = true;
+                exportSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
+                
+                // Send POST request
+                const response = await fetch('/billing/exports', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        reportType: reportType,
+                        queryString: queryString,
+                        selectedIds: selectedIds
+                    })
+                });
+                
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                
+                // Get filename from Content-Disposition header
+                const contentDisposition = response.headers.get('Content-Disposition');
+                let filename = 'export.xlsx';
+                if (contentDisposition) {
+                    const matches = /filename="([^"]+)"/.exec(contentDisposition);
+                    if (matches && matches[1]) {
+                        filename = matches[1];
+                    }
+                }
+                
+                // Download the file
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = filename;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                
+                // Clear selections after successful export (for multiple selection types)
+                if (reportType === 'MULTIPLE_INVOICE' || reportType === 'MULTIPLE_ROW') {
                     localStorage.removeItem('billingSelectedItems');
                     console.log('Cleared billingSelectedItems after multiple selection export');
                     
@@ -184,12 +240,55 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (tableComponent && tableComponent.__x && tableComponent.__x.$data.clearAllSelections) {
                         tableComponent.__x.$data.clearAllSelections();
                     }
-                    
-                    // Also trigger page reload after 500ms to refresh the UI
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 500);
-                }, 200);
+                }
+                
+                // Close modal
+                const modalElement = document.getElementById('modal-export-billing');
+                const modal = bootstrap.Modal.getInstance(modalElement);
+                if (modal) {
+                    modal.hide();
+                }
+                
+                // Show success message
+                Swal.fire({
+                    icon: "success",
+                    title: "Export Complete",
+                    text: "Your file has been downloaded successfully.",
+                    timer: 2000,
+                    showConfirmButton: false
+                });
+                
+                // Reload page to refresh UI
+                setTimeout(function() {
+                    window.location.reload();
+                }, 2000);
+                
+            } catch (error) {
+                console.error('Export error:', error);
+                Swal.fire({
+                    icon: "error",
+                    title: "Export Failed",
+                    text: "Failed to export data. Please try again.",
+                    confirmButtonText: "OK",
+                });
+            } finally {
+                // Reset button state
+                exportSubmitBtn.disabled = false;
+                exportSubmitBtn.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg"
+                        class="icon icon-tabler icon-tabler-database-export" width="24" height="24"
+                        viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" fill="none"
+                        stroke-linecap="round" stroke-linejoin="round">
+                        <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                        <path d="M4 6c0 1.657 3.582 3 8 3s8 -1.343 8 -3s-3.582 -3 -8 -3s-8 1.343 -8 3"></path>
+                        <path d="M4 6v6c0 1.657 3.582 3 8 3c1.118 0 2.183 -.086 3.15 -.241"></path>
+                        <path d="M20 12v-6"></path>
+                        <path d="M4 12v6c0 1.657 3.582 3 8 3c.157 0 .312 -.002 .466 -.005"></path>
+                        <path d="M16 19h6"></path>
+                        <path d="M19 16l3 3l-3 3"></path>
+                    </svg>
+                    Process
+                `;
             }
         });
     }
