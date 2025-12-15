@@ -1,6 +1,8 @@
 const moment = require("moment");
 const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
+const path = require("path");
+const fs = require("fs");
 const { createQueryString } = require("../helpers/createQueryString");
 const listFilesInDirectory = require("../helpers/listFilesInDirectory");
 const ExcelJS = require('exceljs');
@@ -590,49 +592,80 @@ exports.rejectInvoice = async (req, res) => {
 };
 
 exports.exports = async (req, res) => {
-  const { HOST } = process.env;
-  const { reportType, queryString, selectedIds } = req.query;
+  try {
+    const { HOST } = process.env;
+    const { reportType, queryString, selectedIds } = req.query;
 
-  const params = new URLSearchParams(queryString);
+    const params = new URLSearchParams(queryString);
 
-  const searchParam = {};
-  params.forEach((value, key) => {
-    searchParam[key] = value;
-  });
+    const searchParam = {};
+    params.forEach((value, key) => {
+      searchParam[key] = value;
+    });
 
-  let billings = [];
+    let billings = [];
 
-  const db = mongoose.connection;
-  const collection = db.collection("billing");
+    const db = mongoose.connection;
+    const collection = db.collection("billing");
 
-  // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
-  if (reportType === "MULTIPLE_INVOICE") {
-    if (!selectedIds) {
-      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+    // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
+    if (reportType === "MULTIPLE_INVOICE") {
+      if (!selectedIds) {
+        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+      }
+
+      const ids = selectedIds.split(",").map((id) => id.trim());
+
+      // Render view for multiple invoice downloads
+      return res.render('downloadMultipleInvoices', { ids });
     }
 
-    const ids = selectedIds.split(",").map((id) => id.trim());
+    if (reportType === "CURRENT") {
+      const query = exports.buildBillingSearchQuery(searchParam);
+      billings = await collection.find(query).toArray();
+    } else if (reportType === "MULTIPLE_ROW") {
+      if (!selectedIds) {
+        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
+      }
 
-    // Render view for multiple invoice downloads
-    return res.render('downloadMultipleInvoices', { ids });
-  }
-
-  if (reportType === "CURRENT") {
-    const query = exports.buildBillingSearchQuery(searchParam);
-    billings = await collection.find(query).toArray();
-  } else if (reportType === "MULTIPLE_ROW") {
-    if (!selectedIds) {
-      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
+      // Validate and convert IDs, skip invalid ones
+      const idStrings = selectedIds.split(",").map((id) => id.trim()).filter(id => id);
+      const validIds = [];
+      const invalidIds = [];
+      
+      for (const idStr of idStrings) {
+        try {
+          if (mongoose.Types.ObjectId.isValid(idStr)) {
+            validIds.push(new mongoose.Types.ObjectId(idStr));
+          } else {
+            invalidIds.push(idStr);
+          }
+        } catch (e) {
+          invalidIds.push(idStr);
+        }
+      }
+      
+      if (invalidIds.length > 0) {
+        console.warn('Invalid ObjectIds found and skipped:', invalidIds);
+      }
+      
+      if (validIds.length === 0) {
+        return res.status(400).json({ error: "No valid IDs provided" });
+      }
+      
+      billings = await collection.find({ _id: { $in: validIds } }).toArray();
+    } else {
+      billings = await collection.find().toArray();
     }
 
-    const ids = selectedIds.split(",").map((id) => new mongoose.Types.ObjectId(id.trim()));
-    billings = await collection.find({ _id: { $in: ids } }).toArray();
-  } else {
-    billings = await collection.find().toArray();
-  }
+    // Ensure exports directory exists
+    const exportsDir = path.join(process.cwd(), 'exports');
+    if (!fs.existsSync(exportsDir)) {
+      fs.mkdirSync(exportsDir, { recursive: true });
+    }
 
-  const epoch = new Date().getTime().toString();
-  const fileName = `./exports/billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
+    const epoch = new Date().getTime().toString();
+    const fileName = path.join(exportsDir, `billing-${reportType.toLowerCase()}-${epoch}.xlsx`);
   
   // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
@@ -661,19 +694,38 @@ exports.exports = async (req, res) => {
     fgColor: { argb: 'FFD3D3D3' }
   };
 
-  const flatData = billings.map((item) => ({
-    accountID: item.accountID,
-    customerName: item.invoice.cloCustName,
-    clNumber: item.invoice.clnumber,
-    clDate: moment(item.invoice.cldate).format("MM/DD/YYYY"),
-    invoiceNo: item.invoice.invoiceno,
-    invoiceDate: moment(item.invoice.invdate).format("MM/DD/YYYY"),
-    emailSent: item.sentTo,
-    emailSendDate: moment(item.emailSendDate).format("MM/DD/YYYY HH:mm"),
-    status: getBillingStatus(item),
-    excelSummaryInvoice: `${HOST}/uploads/${item.excelSummaryInvoice}`,
-    rejectionReason: item.rejectionReason || '',
-  }));
+  const flatData = billings.map((item) => {
+    try {
+      return {
+        accountID: item.accountID || '',
+        customerName: item.invoice?.cloCustName || '',
+        clNumber: item.invoice?.clnumber || '',
+        clDate: item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
+        invoiceNo: item.invoice?.invoiceno || '',
+        invoiceDate: item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
+        emailSent: item.sentTo || '',
+        emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : '',
+        status: getBillingStatus(item),
+        excelSummaryInvoice: item.excelSummaryInvoice ? `${HOST}/uploads/${item.excelSummaryInvoice}` : '',
+        rejectionReason: item.rejectionReason || '',
+      };
+    } catch (error) {
+      console.error('Error processing billing item:', item._id, error);
+      return {
+        accountID: item.accountID || '',
+        customerName: 'Error',
+        clNumber: '',
+        clDate: '',
+        invoiceNo: '',
+        invoiceDate: '',
+        emailSent: '',
+        emailSendDate: '',
+        status: 'Error',
+        excelSummaryInvoice: '',
+        rejectionReason: 'Error processing this row',
+      };
+    }
+  });
 
   // Add rows
   worksheet.addRows(flatData);
@@ -681,6 +733,11 @@ exports.exports = async (req, res) => {
   // Write to file and download
   await workbook.xlsx.writeFile(fileName);
   res.download(fileName);
+  } catch (error) {
+    console.error('Error in exports():', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ error: 'Failed to generate export file', message: error.message });
+  }
 };
 
 exports.buildBillingSearchQuery = (params) => {
@@ -840,75 +897,106 @@ const getBillingStatus = (item) => {
 };
 
 exports.exportsCustomerBilling = async (req, res) => {
-  const { HOST } = process.env;
-  const { reportType, queryString, selectedIds } = req.query;
+  try {
+    const { HOST } = process.env;
+    const { reportType, queryString, selectedIds } = req.query;
 
-  const params = new URLSearchParams(queryString);
+    const params = new URLSearchParams(queryString);
 
-  const searchParam = {};
-  params.forEach((value, key) => {
-    searchParam[key] = value;
-  });
+    const searchParam = {};
+    params.forEach((value, key) => {
+      searchParam[key] = value;
+    });
 
-  // Filter by account id
-  const clonedUser = JSON.parse(JSON.stringify(req.user));
-  
-  let billings = [];
+    // Filter by account id
+    const clonedUser = JSON.parse(JSON.stringify(req.user));
+    
+    let billings = [];
 
-  const db = mongoose.connection;
-  const collection = db.collection("billing");
+    const db = mongoose.connection;
+    const collection = db.collection("billing");
 
-  // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
-  if (reportType === "MULTIPLE_INVOICE") {
-    if (!selectedIds) {
-      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+    // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
+    if (reportType === "MULTIPLE_INVOICE") {
+      if (!selectedIds) {
+        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+      }
+
+      const ids = selectedIds.split(",").map((id) => id.trim());
+
+      // Render view for multiple invoice downloads
+      return res.render('downloadMultipleInvoices', { ids });
     }
 
-    const ids = selectedIds.split(",").map((id) => id.trim());
+    if (reportType === "CURRENT") {
+      const query = exports.buildBillingSearchQuery(searchParam);
+      
+      // Add account filter for non-superadmin users
+      if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+        query["accountID"] = { $in: clonedUser.accountID };
+      }
+      
+      query["billingStatus"] = { $ne: "CANCELLED" };
+      billings = await collection.find(query).toArray();
+    } else if (reportType === "MULTIPLE_ROW") {
+      if (!selectedIds) {
+        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
+      }
 
-    // Render view for multiple invoice downloads
-    return res.render('downloadMultipleInvoices', { ids });
-  }
+      // Validate and convert IDs, skip invalid ones
+      const idStrings = selectedIds.split(",").map((id) => id.trim()).filter(id => id);
+      const validIds = [];
+      const invalidIds = [];
+      
+      for (const idStr of idStrings) {
+        try {
+          if (mongoose.Types.ObjectId.isValid(idStr)) {
+            validIds.push(new mongoose.Types.ObjectId(idStr));
+          } else {
+            invalidIds.push(idStr);
+          }
+        } catch (e) {
+          invalidIds.push(idStr);
+        }
+      }
+      
+      if (invalidIds.length > 0) {
+        console.warn('Invalid ObjectIds found and skipped:', invalidIds);
+      }
+      
+      if (validIds.length === 0) {
+        return res.status(400).json({ error: "No valid IDs provided" });
+      }
+      
+      const query = { _id: { $in: validIds } };
+      
+      // Add account filter for non-superadmin users
+      if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+        query["accountID"] = { $in: clonedUser.accountID };
+      }
+      
+      billings = await collection.find(query).toArray();
+    } else {
+      const filter = {
+        billingStatus: { $ne: "CANCELLED" }
+      };
+      
+      // Add account filter for non-superadmin users
+      if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+        filter["accountID"] = { $in: clonedUser.accountID };
+      }
+      
+      billings = await collection.find(filter).toArray();
+    }
 
-  if (reportType === "CURRENT") {
-    const query = exports.buildBillingSearchQuery(searchParam);
-    
-    // Add account filter for non-superadmin users
-    if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
-      query["accountID"] = { $in: clonedUser.accountID };
-    }
-    
-    query["billingStatus"] = { $ne: "CANCELLED" };
-    billings = await collection.find(query).toArray();
-  } else if (reportType === "MULTIPLE_ROW") {
-    if (!selectedIds) {
-      return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
+    // Ensure exports directory exists
+    const exportsDir = path.join(process.cwd(), 'exports');
+    if (!fs.existsSync(exportsDir)) {
+      fs.mkdirSync(exportsDir, { recursive: true });
     }
 
-    const ids = selectedIds.split(",").map((id) => new mongoose.Types.ObjectId(id.trim()));
-    const query = { _id: { $in: ids } };
-    
-    // Add account filter for non-superadmin users
-    if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
-      query["accountID"] = { $in: clonedUser.accountID };
-    }
-    
-    billings = await collection.find(query).toArray();
-  } else {
-    const filter = {
-      billingStatus: { $ne: "CANCELLED" }
-    };
-    
-    // Add account filter for non-superadmin users
-    if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
-      filter["accountID"] = { $in: clonedUser.accountID };
-    }
-    
-    billings = await collection.find(filter).toArray();
-  }
-
-  const epoch = new Date().getTime().toString();
-  const fileName = `./exports/user-billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
+    const epoch = new Date().getTime().toString();
+    const fileName = path.join(exportsDir, `user-billing-${reportType.toLowerCase()}-${epoch}.xlsx`);
 
   // Create workbook and worksheet
   const workbook = new ExcelJS.Workbook();
@@ -936,20 +1024,36 @@ exports.exportsCustomerBilling = async (req, res) => {
     fgColor: { argb: 'FFD3D3D3' }
   };
 
-  const flatData = billings.map((item) => ({
-    accountID: item.accountID,
-    cloCustName: item.invoice.cloCustName,
-    clNumber: item.invoice.clnumber,
-    clDate: moment(item.invoice.cldate).format("MM/DD/YYYY"),
-    invoiceNo: item.invoice.invoiceno,
-    invoiceDate: moment(item.invoice.invdate).format("MM/DD/YYYY"),
-    downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
-    emailSendDate: item.emailSendDate
-      ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm")
-      : "-",
-    status: getBillingStatus(item),
-    rejectionReason: item.rejectionReason || '',
-  }));
+  const flatData = billings.map((item) => {
+    try {
+      return {
+        accountID: item.accountID || '',
+        cloCustName: item.invoice?.cloCustName || '',
+        clNumber: item.invoice?.clnumber || '',
+        clDate: item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
+        invoiceNo: item.invoice?.invoiceno || '',
+        invoiceDate: item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
+        downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
+        emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : "-",
+        status: getBillingStatus(item),
+        rejectionReason: item.rejectionReason || '',
+      };
+    } catch (error) {
+      console.error('Error processing billing item:', item._id, error);
+      return {
+        accountID: item.accountID || '',
+        cloCustName: 'Error',
+        clNumber: '',
+        clDate: '',
+        invoiceNo: '',
+        invoiceDate: '',
+        downloadInvoice: '',
+        emailSendDate: '-',
+        status: 'Error',
+        rejectionReason: 'Error processing this row',
+      };
+    }
+  });
 
   // Add rows
   worksheet.addRows(flatData);
@@ -957,5 +1061,10 @@ exports.exportsCustomerBilling = async (req, res) => {
   // Write to file and download
   await workbook.xlsx.writeFile(fileName);
   res.download(fileName);
+  } catch (error) {
+    console.error('Error in exportsCustomerBilling():', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ error: 'Failed to generate export file', message: error.message });
+  }
 };
 
