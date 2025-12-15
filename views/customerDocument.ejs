@@ -19,12 +19,14 @@
             const searchingParameter = window.location.search;
             document.getElementById('exportQueryString').value = searchingParameter;
 
-            document.querySelector("input[name='range']").value = urlParams.get('range') || '';
+            document.querySelector("input[name='pic']").value = urlParams.get('pic') || '';
             document.querySelector("input[name='accountID']").value = urlParams.get('accountID') || '';
             document.querySelector("input[name='clNumber']").value = urlParams.get('clNumber') || '';
             document.querySelector("input[name='clDate']").value = urlParams.get('clDate') || '';
             document.querySelector("input[name='invoiceNo']").value = urlParams.get('invoiceNo') || '';
             document.querySelector("input[name='invoiceDate']").value = urlParams.get('invoiceDate') || '';
+            document.querySelector("input[name='emailSent']").value = urlParams.get('emailSent') || '';
+            document.querySelector("input[name='emailSentDate']").value = urlParams.get('emailSentDate') || '';
             document.querySelector("select[name='billingStatus']").value = urlParams.get('billingStatus') || '';
         });
     </script>
@@ -111,28 +113,52 @@
 
                 <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
                 <script>
-                    var picker = new Litepicker({
-                        element: document.getElementById('dateRange'),
+                    new Litepicker({
+                        element: document.getElementById('dateRangeCLDate'),
                         singleMode: false,
                         allowRepick: true,
-                        singleMode: false,
                         numberOfMonths: 1,
                         showMonthYearPickers: true, // enable month and year dropdowns
                         dropdowns: {
-                            minYear: 1990,
+                            minYear: 2000,
                             maxYear: null,
                             months: true,
                             years: true
                         },
-                        onSelect: function (start, end) {
-                            // You have your start and end date here
-                        }
+                    });
+
+                    new Litepicker({
+                        element: document.getElementById('dateRangeInvoiceDate'),
+                        singleMode: false,
+                        allowRepick: true,
+                        numberOfMonths: 1,
+                        showMonthYearPickers: true, // enable month and year dropdowns
+                        dropdowns: {
+                            minYear: 2000,
+                            maxYear: null,
+                            months: true,
+                            years: true
+                        },
+                    });
+
+                    new Litepicker({
+                        element: document.getElementById('dateRangeEmailSentDate'),
+                        singleMode: false,
+                        allowRepick: true,
+                        numberOfMonths: 1,
+                        showMonthYearPickers: true, // enable month and year dropdowns
+                        dropdowns: {
+                            minYear: 2000,
+                            maxYear: null,
+                            months: true,
+                            years: true
+                        },
                     });
                 </script>
 
                 <script>
                     document.addEventListener("DOMContentLoaded", () => {
-                        const SELECTED_KEY = "selectedItems";
+                        const SELECTED_KEY = "customerBillingSelectedItems";
 
                         // Function to clear localStorage, uncheck boxes, and reset Alpine data
                         function clearSelectedItems() {
@@ -187,8 +213,8 @@
                 </script>
                 <% if (clearSelected) { %>
                     <script>
-                        console.log("Clearing selectedItems because query is empty");
-                        localStorage.removeItem("selectedItems");
+                        console.log("Clearing customerBillingSelectedItems because query is empty");
+                        localStorage.removeItem("customerBillingSelectedItems");
 
                         // Uncheck all checkboxes
                         document.querySelectorAll('.select-item').forEach(cb => cb.checked = false);

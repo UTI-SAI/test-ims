@@ -1,34 +1,44 @@
 <form action="/customer-document" method="get">
     <fieldset class="form-fieldset">
         <div class="row">
-            <div class="col-md-4 mb-1">
-                <label class="form-label">Date Range</label>
-                <input name="range" type="text" class="form-control" id="dateRange" autocomplete="off" />
+            <div class="col-md-3 mb-3">
+                <label class="form-label">PIC</label>
+                <input name="pic" type="text" class="form-control" autocomplete="off" placeholder="PIC1, PIC2" />
             </div>
-            <div class="col-md-4 mb-1">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">Account ID</label>
-                <input name="accountID" type="text" class="form-control" autocomplete="off" placeholder="JSX123" />
+                <input name="accountID" type="text" class="form-control" autocomplete="off" />
             </div>
-            <div class="col-md-4 mb-1">
-                <label class="form-label">Invoice Number</label>
-                <input name="invoiceNo" type="text" class="form-control" autocomplete="off"
-                    placeholder="INV_00XX">
-            </div>
-        </div>
-        <div class="row">
-            <div class="col-md-3 mb-1">
-                <label class="form-label">Invoice Date</label>
-                <input name="invoiceDate" type="date" class="form-control" autocomplete="off" />
-            </div>
-            <div class="col-md-3 mb-1">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">CL Number</label>
                 <input name="clNumber" type="text" class="form-control" autocomplete="off" placeholder="CL21agusXXX" />
             </div>
-            <div class="col-md-3 mb-1">
+            <div class="col-md-3 mb-3">
                 <label class="form-label">CL Date</label>
-                <input name="clDate" type="date" class="form-control" autocomplete="off" />
+                <input name="clDate" type="text" class="form-control" autocomplete="off" id="dateRangeCLDate" />
             </div>
-            <div class="col-md-3 mb-1">
+        </div>
+        <div class="row">
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Invoice Number</label>
+                <input name="invoiceNo" type="text" class="form-control" autocomplete="off" placeholder="INV_00XX">
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Invoice Date</label>
+                <input name="invoiceDate" type="text" class="form-control" autocomplete="off"
+                    id="dateRangeInvoiceDate" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Email Sent</label>
+                <input name="emailSent" type="text" class="form-control" autocomplete="off"
+                    placeholder="mail1@mail.com, mail2@mail.com" />
+            </div>
+            <div class="col-md-2 mb-3">
+                <label class="form-label">Email Sent Date</label>
+                <input name="emailSentDate" type="text" class="form-control" autocomplete="off"
+                    id="dateRangeEmailSentDate" />
+            </div>
+            <div class="col-md-2 mb-3">
                 <label class="form-label">Status</label>
                 <select name="billingStatus" class="form-select">
                     <option value="">Select Status</option>

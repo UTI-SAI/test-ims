@@ -107,9 +107,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // Read selected items from localStorage (persistent across pages)
     function getStoredSelectedItems() {
         try {
-            return JSON.parse(localStorage.getItem("selectedItems") || "[]");
+            return JSON.parse(localStorage.getItem("billingSelectedItems") || "[]");
         } catch (e) {
-            console.error("Error parsing selectedItems:", e);
+            console.error("Error parsing billingSelectedItems:", e);
             return [];
         }
     }
@@ -118,6 +118,9 @@ document.addEventListener("DOMContentLoaded", () => {
     function updateExportState() {
         const storedItems = getStoredSelectedItems();
         const joinedIds = storedItems.join(",");
+
+        console.log('Export modal - stored items:', storedItems.length, 'items');
+        console.log('Export modal - selectedIds input value:', joinedIds);
 
         // Update hidden input for form submission
         selectedIdsInput.value = joinedIds;
@@ -173,8 +176,14 @@ document.addEventListener("DOMContentLoaded", () => {
                  selectedReportType.value === 'MULTIPLE_ROW')) {
                 // Clear selections after a short delay to allow form submission
                 setTimeout(function() {
-                    localStorage.removeItem('selectedItems');
-                    console.log('Cleared selectedItems after multiple selection export');
+                    localStorage.removeItem('billingSelectedItems');
+                    console.log('Cleared billingSelectedItems after multiple selection export');
+                    
+                    // Trigger clearAllSelections in Alpine.js component
+                    const tableComponent = document.querySelector('[x-data]');
+                    if (tableComponent && tableComponent.__x && tableComponent.__x.$data.clearAllSelections) {
+                        tableComponent.__x.$data.clearAllSelections();
+                    }
                     
                     // Also trigger page reload after 500ms to refresh the UI
                     setTimeout(function() {

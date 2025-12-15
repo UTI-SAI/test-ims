@@ -1,6 +1,6 @@
 <div 
     x-data="{
-        selectedItems: JSON.parse(localStorage.getItem('selectedItems') || '[]'),
+        selectedItems: JSON.parse(localStorage.getItem('billingSelectedItems') || '[]'),
         selectAll: false,
         isLoadingAllPages: false,
 
@@ -77,7 +77,7 @@
 
         syncStorage() {
             // Update localStorage
-            localStorage.setItem('selectedItems', JSON.stringify(this.selectedItems));
+            localStorage.setItem('billingSelectedItems', JSON.stringify(this.selectedItems));
 
             // Update hidden input for export modal
             const selectedInput = document.getElementById('selectedIds');
@@ -91,7 +91,7 @@
 
         restoreCheckboxes() {
             const allCheckboxes = [...document.querySelectorAll('.select-item')];
-            const storedItems = JSON.parse(localStorage.getItem('selectedItems') || '[]');
+            const storedItems = JSON.parse(localStorage.getItem('billingSelectedItems') || '[]');
 
             allCheckboxes.forEach(el => {
                 el.checked = storedItems.includes(el.value);
@@ -107,7 +107,7 @@
             this.selectAll = false;
             const allCheckboxes = [...document.querySelectorAll('.select-item')];
             allCheckboxes.forEach(el => el.checked = false);
-            localStorage.removeItem('selectedItems');
+            localStorage.removeItem('billingSelectedItems');
             console.log('All selections cleared');
         }
     }"

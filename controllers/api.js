@@ -623,139 +623,11 @@ exports.getAllBillingIds = async (req, res) => {
     const db = mongoose.connection;
     const collection = db.collection('billing');
 
-    // Build query using the same logic as fetch
-    const buildBillingSearchQuery = (params) => {
-      const {
-        accountID,
-        customerName,
-        clNumber,
-        invoiceNo,
-        clDate,
-        invoiceDate,
-        emailSent,
-        billingStatus,
-        emailSentDate,
-      } = params;
-
-      const query = {};
-
-      if (accountID && typeof accountID == "string") {
-        const accountIDArray = accountID?.split(",")?.map((item) => {
-          return { accountID: { $regex: item.trim(), $options: "i" } };
-        });
-
-        if (accountIDArray.length > 0) {
-          query.$or = accountIDArray;
-        }
-      } else if (accountID && typeof accountID == "object") {
-        query.$or = [{ accountID }];
-      }
-
-      if (customerName) {
-        const customerNameArray = customerName?.split(",")?.map((item) => {
-          return { cloCustName: { $regex: item.trim(), $options: "i" } };
-        });
-
-        if (customerNameArray.length > 0) {
-          query.$or = customerNameArray;
-        }
-      }
-
-      if (clNumber) {
-        const itemsArray = clNumber?.split(",")?.map((item) => {
-          return { clnumber: { $regex: item.trim(), $options: "i" } };
-        });
-
-        if (itemsArray.length > 0) {
-          query.$or = itemsArray;
-        }
-      }
-
-      if (invoiceNo) {
-        const itemsArray = invoiceNo?.split(",")?.map((item) => {
-          return { invoiceno: { $regex: item.trim(), $options: "i" } };
-        });
-
-        if (itemsArray.length > 0) {
-          query.$or = itemsArray;
-        }
-      }
-
-      if (clDate) {
-        const [start, end] = clDate.split(" - ");
-        const startDate = new Date(`${start}T00:00:00.000Z`);
-        const endDate = new Date(`${end}T23:59:59.999Z`);
-        query["invoice.cldate"] = {
-          $gte: startDate,
-          $lt: endDate,
-        };
-      }
-
-      if (invoiceDate) {
-        if (invoiceDate.includes(" - ")) {
-          const [start, end] = invoiceDate.split(" - ");
-          const startDate = new Date(`${start}T00:00:00.000Z`);
-          const endDate = new Date(`${end}T23:59:59.999Z`);
-          query["invoice.invdate"] = {
-            $gte: startDate,
-            $lt: endDate,
-          };
-        } else {
-          const startDate = new Date(`${invoiceDate}T00:00:00.000Z`);
-          const endDate = new Date(`${invoiceDate}T23:59:59.999Z`);
-          query["invoice.invdate"] = {
-            $gte: startDate,
-            $lt: endDate,
-          };
-        }
-      }
-
-      if (emailSentDate) {
-        const [start, end] = emailSentDate.split(" - ");
-        const startDate = new Date(`${start}T00:00:00.000Z`);
-        const endDate = new Date(`${end}T23:59:59.999Z`);
-        query["emailSendDate"] = {
-          $gte: startDate.toISOString(),
-          $lt: endDate.toISOString(),
-        };
-      }
-
-      if (emailSent) {
-        const itemsArray = emailSent?.split(",")?.map((item) => {
-          return { sentTo: { $regex: item.trim(), $options: "i" } };
-        });
-
-        if (itemsArray.length > 0) {
-          query.$or = itemsArray;
-        }
-      }
-
-      if (billingStatus) {
-        if (billingStatus === "EMAIL_READ") {
-          query["customerDownloadHistory"] = {
-            $gt: [{ $size: "$customerDownloadHistory" }, 0],
-          };
-          query["$or"] = [
-            { billingStatus: { $exists: false } },
-            { billingStatus: { $ne: "PAID" } },
-          ];
-        } else if (billingStatus === "UNPAID") {
-          query["customerDownloadHistory"] = { $size: 0 };
-          query["$or"] = [
-            { billingStatus: { $exists: false } },
-            { billingStatus: { $ne: "PAID" } },
-          ];
-        } else if (billingStatus === "REJECTED") {
-          query["isRejected"] = true;
-        } else {
-          query["billingStatus"] = billingStatus;
-        }
-      }
-
-      return query;
-    };
-
-    const query = buildBillingSearchQuery(req.query);
+    // Import buildBillingSearchQuery from billing controller
+    const billingController = require('./billing');
+    const query = billingController.buildBillingSearchQuery(req.query);
+    
+    console.log('getAllBillingIds query:', JSON.stringify(query, null, 2));
     
     // Fetch only _id field to minimize data transfer
     const billings = await collection.find(query, { projection: { _id: 1 } }).toArray();
@@ -777,39 +649,121 @@ exports.getAllCustomerBillingIds = async (req, res) => {
     const db = mongoose.connection;
     const collection = db.collection('billing');
 
-    // Build query similar to fetchCustomerBilling
+    // Build query using same logic as fetchCustomerBilling
     const {
       accountID,
       customerName,
+      pic,
       clNumber,
       invoiceNo,
       clDate,
       invoiceDate,
       emailSent,
+      emailSentDate,
       billingStatus,
-      range,
     } = req.query;
 
     const query = {};
-    if (accountID) query["accountID"] = accountID;
-    if (customerName)
-      query["cloCustName"] = {
-        $regex: customerName,
-        $options: "i",
-      };
-    if (clNumber) query["clnumber"] = clNumber;
-    if (invoiceNo) query["invoiceno"] = invoiceNo;
+    const clonedUser = JSON.parse(JSON.stringify(req.user));
+
+    // Handle accountID search with multiple values
+    // For USER role, validate that they can only search their own accountIDs
+    if (accountID) {
+      const accountIDArray = accountID.split(",").map((item) => item.trim());
+      
+      // If USER role, intersect search accountIDs with user's assigned accountIDs
+      if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+        // Filter to only allow accountIDs that user has access to
+        const allowedAccountIDs = accountIDArray.filter(searchId => 
+          clonedUser.accountID.some(userAccountId => 
+            userAccountId.toLowerCase() === searchId.toLowerCase()
+          )
+        );
+        
+        // If no valid accountIDs found, set impossible condition to return empty result
+        if (allowedAccountIDs.length === 0) {
+          query["accountID"] = { $in: [] }; // Will return no results
+        } else if (allowedAccountIDs.length === 1) {
+          query["accountID"] = { $regex: allowedAccountIDs[0], $options: "i" };
+        } else {
+          query["accountID"] = { 
+            $in: allowedAccountIDs.map(item => new RegExp(item, "i"))
+          };
+        }
+      } else {
+        // For SUPER_ADMIN and ADMIN, allow any accountID search
+        if (accountIDArray.length === 1) {
+          query["accountID"] = { $regex: accountIDArray[0], $options: "i" };
+        } else {
+          query["accountID"] = { 
+            $in: accountIDArray.map(item => new RegExp(item, "i"))
+          };
+        }
+      }
+    }
+
+    // Handle customerName
+    if (customerName) {
+      const customerNameArray = customerName.split(",").map((item) => item.trim());
+      if (customerNameArray.length === 1) {
+        query["cloCustName"] = { $regex: customerNameArray[0], $options: "i" };
+      } else {
+        query["cloCustName"] = {
+          $in: customerNameArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle PIC search with multiple values
+    if (pic) {
+      const picArray = pic.split(",").map((item) => item.trim());
+      if (picArray.length === 1) {
+        query["pic"] = { $regex: picArray[0], $options: "i" };
+      } else {
+        query["pic"] = {
+          $in: picArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle clNumber search with multiple values
+    if (clNumber) {
+      const clNumberArray = clNumber.split(",").map((item) => item.trim());
+      if (clNumberArray.length === 1) {
+        query["clnumber"] = { $regex: clNumberArray[0], $options: "i" };
+      } else {
+        query["clnumber"] = {
+          $in: clNumberArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle invoiceNo search with multiple values
+    if (invoiceNo) {
+      const invoiceNoArray = invoiceNo.split(",").map((item) => item.trim());
+      if (invoiceNoArray.length === 1) {
+        query["invoiceno"] = { $regex: invoiceNoArray[0], $options: "i" };
+      } else {
+        query["invoiceno"] = {
+          $in: invoiceNoArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle clDate range
     if (clDate) {
-      const startDate = new Date(`${clDate}T00:00:00.000Z`);
-      const endDate = new Date(`${clDate}T23:59:59.999Z`);
+      const [start, end] = clDate.split(" - ");
+      const startDate = new Date(`${start}T00:00:00.000Z`);
+      const endDate = new Date(`${end}T23:59:59.999Z`);
       query["invoice.cldate"] = {
         $gte: startDate,
         $lt: endDate,
       };
     }
 
-    if (range) {
-      const [start, end] = range.split(" - ");
+    // Handle invoiceDate range
+    if (invoiceDate) {
+      const [start, end] = invoiceDate.split(" - ");
       const startDate = new Date(`${start}T00:00:00.000Z`);
       const endDate = new Date(`${end}T23:59:59.999Z`);
       query["invoice.invdate"] = {
@@ -818,21 +772,30 @@ exports.getAllCustomerBillingIds = async (req, res) => {
       };
     }
 
-    if (invoiceDate) {
-      const startDate = new Date(`${invoiceDate}T00:00:00.000Z`);
-      const endDate = new Date(`${invoiceDate}T23:59:59.999Z`);
-      query["invoice.invdate"] = {
-        $gte: startDate,
-        $lt: endDate,
+    // Handle emailSentDate range
+    if (emailSentDate) {
+      const [start, end] = emailSentDate.split(" - ");
+      const startDate = new Date(`${start}T00:00:00.000Z`);
+      const endDate = new Date(`${end}T23:59:59.999Z`);
+      query["emailSendDate"] = {
+        $gte: startDate.toISOString(),
+        $lt: endDate.toISOString(),
       };
     }
 
+    // Handle emailSent search with multiple values
     if (emailSent) {
-      query["emailSent"] = {
-        $in: emailSent.split(","),
-      };
+      const emailSentArray = emailSent.split(",").map((item) => item.trim());
+      if (emailSentArray.length === 1) {
+        query["sentTo"] = { $regex: emailSentArray[0], $options: "i" };
+      } else {
+        query["sentTo"] = {
+          $in: emailSentArray.map(item => new RegExp(item, "i"))
+        };
+      }
     }
 
+    // Handle billing status
     if (billingStatus) {
       if (billingStatus === "EMAIL_READ") {
         query["customerDownloadHistory"] = {
@@ -855,16 +818,16 @@ exports.getAllCustomerBillingIds = async (req, res) => {
       }
     }
 
-    // Filter by account id (important for USER role)
-    const clonedUser = JSON.parse(JSON.stringify(req.user));
-
-    if (req.query.accountID) {
-      query["accountID"] = { $eq: req.query.accountID };
-    } else {
-      if (req.user.role == 'USER') {
+    // Filter by account id for USER role (if not already filtered by accountID search param)
+    if (req.user.role === 'USER') {
+      // If USER didn't search by accountID, restrict to their assigned accountIDs
+      if (!req.query.accountID && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
         query["accountID"] = { $in: clonedUser.accountID };
       }
+      // If USER searched by accountID, validation already handled above
     }
+
+    console.log('getAllCustomerBillingIds query:', JSON.stringify(query, null, 2));
 
     // Fetch only _id field
     const billings = await collection.find(query, { projection: { _id: 1 } }).toArray();

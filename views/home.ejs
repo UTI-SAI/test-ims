@@ -231,7 +231,7 @@
         </script>
         <script>
             document.addEventListener("DOMContentLoaded", () => {
-                const SELECTED_KEY = "selectedItems";
+                const SELECTED_KEY = "billingSelectedItems";
 
                 // Function to clear localStorage, uncheck boxes, and reset Alpine data
                 function clearSelectedItems() {
@@ -286,8 +286,8 @@
         </script>
         <% if (clearSelected) { %>
             <script>
-                console.log("Clearing selectedItems because query is empty");
-                localStorage.removeItem("selectedItems");
+                console.log("Clearing billingSelectedItems because query is empty");
+                localStorage.removeItem("billingSelectedItems");
 
                 // Uncheck all checkboxes
                 document.querySelectorAll('.select-item').forEach(cb => cb.checked = false);
