@@ -22,13 +22,13 @@ router.post(
   billingController.rejectInvoice
 );
 
-router.get(
+router.post(
   "/exports",
   ensureRoles(ROLES.SUPER_ADMIN),
   billingController.exports
 );
 
-router.get(
+router.post(
   "/exports-customer",
   ensureRoles(ROLES.USER, ROLES.SUPER_ADMIN, ROLES.ADMIN),
   billingController.exportsCustomerBilling

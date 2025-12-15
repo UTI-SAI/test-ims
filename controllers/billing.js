@@ -592,7 +592,7 @@ exports.rejectInvoice = async (req, res) => {
 exports.exports = async (req, res) => {
   try {
     const { HOST } = process.env;
-    const { reportType, queryString, selectedIds } = req.query;
+    const { reportType, queryString, selectedIds } = req.body;
 
     const params = new URLSearchParams(queryString);
 
@@ -896,7 +896,7 @@ const getBillingStatus = (item) => {
 exports.exportsCustomerBilling = async (req, res) => {
   try {
     const { HOST } = process.env;
-    const { reportType, queryString, selectedIds } = req.query;
+    const { reportType, queryString, selectedIds } = req.body;
 
     const params = new URLSearchParams(queryString);
 
