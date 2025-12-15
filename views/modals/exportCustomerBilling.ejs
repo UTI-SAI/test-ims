@@ -107,9 +107,9 @@
         // Read selected items from localStorage (persistent across pages)
         function getStoredSelectedItems() {
             try {
-                return JSON.parse(localStorage.getItem("selectedItems") || "[]");
+                return JSON.parse(localStorage.getItem("customerBillingSelectedItems") || "[]");
             } catch (e) {
-                console.error("Error parsing selectedItems:", e);
+                console.error("Error parsing customerBillingSelectedItems:", e);
                 return [];
             }
         }
@@ -159,29 +159,29 @@
         // Initialize on load
         updateExportState();
 
-        // Handle form submission - clear selections for multiple selection exports
+        // Handle form submission - clear selections after export
         const exportForm = document.querySelector("#modal-export-customer form");
         const exportCustomerSubmitBtn = document.getElementById("exportCustomerSubmitBtn");
         
         if (exportCustomerSubmitBtn) {
             exportCustomerSubmitBtn.addEventListener("click", function(e) {
-                // Get selected report type
-                const selectedReportType = exportForm.querySelector('input[name="reportType"]:checked');
-                
-                if (selectedReportType && 
-                    (selectedReportType.value === 'MULTIPLE_INVOICE' || 
-                     selectedReportType.value === 'MULTIPLE_ROW')) {
-                    // Clear selections after a short delay to allow form submission
+                // Clear selections after a short delay to allow form submission
+                setTimeout(function() {
+                    // Clear localStorage
+                    localStorage.removeItem('customerBillingSelectedItems');
+                    console.log('Cleared customerBillingSelectedItems after export');
+                    
+                    // Trigger clearAllSelections in Alpine.js component
+                    const tableComponent = document.querySelector('[x-data]');
+                    if (tableComponent && tableComponent.__x && tableComponent.__x.$data.clearAllSelections) {
+                        tableComponent.__x.$data.clearAllSelections();
+                    }
+                    
+                    // Reload page to refresh UI
                     setTimeout(function() {
-                        localStorage.removeItem('selectedItems');
-                        console.log('Cleared selectedItems after multiple selection export');
-                        
-                        // Reload page to refresh UI
-                        setTimeout(function() {
-                            window.location.reload();
-                        }, 500);
-                    }, 200);
-                }
+                        window.location.reload();
+                    }, 500);
+                }, 200);
             });
         }
     });

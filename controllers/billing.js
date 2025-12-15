@@ -9,7 +9,7 @@ const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoice
 
 exports.fetch = async (req, res) => {
   try {
-    let query = buildBillingSearchQuery(req.query);
+    let query = exports.buildBillingSearchQuery(req.query);
 
     const { page = 1, pageSize = 10 } = req.query;
 
@@ -65,15 +65,16 @@ exports.fetchCustomerBilling = async (req, res) => {
     const {
       accountID,
       customerName,
+      pic,
       clNumber,
       invoiceNo,
       clDate,
       invoiceDate,
       emailSent,
+      emailSentDate,
       billingStatus,
       id,
       logId,
-      range,
       page = 1,
       pageSize = 10,
     } = req.query;
@@ -82,33 +83,106 @@ exports.fetchCustomerBilling = async (req, res) => {
     const limit = parseInt(pageSize);
 
     const query = {};
-    if (accountID) query["accountID"] = accountID;
-    if (customerName)
-      query["cloCustName"] = {
-        $regex: customerName,
-        $options: "i",
-      };
-    if (clNumber) 
-      query["invoice.clnumber"] = {
-        $regex: clNumber,
-        $options: "i",
-      };
-    if (invoiceNo) 
-      query["invoice.invoiceno"] = {
-        $regex: invoiceNo,
-        $options: "i",
-      };
+    const clonedUser = JSON.parse(JSON.stringify(req.user));
+
+    // Handle accountID search with multiple values
+    // For USER role, validate that they can only search their own accountIDs
+    if (accountID) {
+      const accountIDArray = accountID.split(",").map((item) => item.trim());
+      
+      // If USER role, intersect search accountIDs with user's assigned accountIDs
+      if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
+        // Filter to only allow accountIDs that user has access to
+        const allowedAccountIDs = accountIDArray.filter(searchId => 
+          clonedUser.accountID.some(userAccountId => 
+            userAccountId.toLowerCase() === searchId.toLowerCase()
+          )
+        );
+        
+        // If no valid accountIDs found, set impossible condition to return empty result
+        if (allowedAccountIDs.length === 0) {
+          query["accountID"] = { $in: [] }; // Will return no results
+        } else if (allowedAccountIDs.length === 1) {
+          query["accountID"] = { $regex: allowedAccountIDs[0], $options: "i" };
+        } else {
+          query["accountID"] = { 
+            $in: allowedAccountIDs.map(item => new RegExp(item, "i"))
+          };
+        }
+      } else {
+        // For SUPER_ADMIN and ADMIN, allow any accountID search
+        if (accountIDArray.length === 1) {
+          query["accountID"] = { $regex: accountIDArray[0], $options: "i" };
+        } else {
+          query["accountID"] = { 
+            $in: accountIDArray.map(item => new RegExp(item, "i"))
+          };
+        }
+      }
+    }
+
+    // Handle customerName (not used in customer view but kept for consistency)
+    if (customerName) {
+      const customerNameArray = customerName.split(",").map((item) => item.trim());
+      if (customerNameArray.length === 1) {
+        query["cloCustName"] = { $regex: customerNameArray[0], $options: "i" };
+      } else {
+        query["cloCustName"] = {
+          $in: customerNameArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle PIC search with multiple values
+    if (pic) {
+      const picArray = pic.split(",").map((item) => item.trim());
+      if (picArray.length === 1) {
+        query["pic"] = { $regex: picArray[0], $options: "i" };
+      } else {
+        query["pic"] = {
+          $in: picArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle clNumber search with multiple values
+    if (clNumber) {
+      const clNumberArray = clNumber.split(",").map((item) => item.trim());
+      if (clNumberArray.length === 1) {
+        query["clnumber"] = { $regex: clNumberArray[0], $options: "i" };
+      } else {
+        query["clnumber"] = {
+          $in: clNumberArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle invoiceNo search with multiple values
+    if (invoiceNo) {
+      const invoiceNoArray = invoiceNo.split(",").map((item) => item.trim());
+      if (invoiceNoArray.length === 1) {
+        query["invoiceno"] = { $regex: invoiceNoArray[0], $options: "i" };
+      } else {
+        query["invoiceno"] = {
+          $in: invoiceNoArray.map(item => new RegExp(item, "i"))
+        };
+      }
+    }
+
+    // Handle clDate range
     if (clDate) {
-      const startDate = new Date(`${clDate}T00:00:00.000Z`);
-      const endDate = new Date(`${clDate}T23:59:59.999Z`);
+      const [start, end] = clDate.split(" - ");
+      const startDate = new Date(`${start}T00:00:00.000Z`);
+      const endDate = new Date(`${end}T23:59:59.999Z`);
       query["invoice.cldate"] = {
         $gte: startDate,
         $lt: endDate,
       };
     }
 
-    if (range) {
-      const [start, end] = range.split(" - ");
+    // Handle invoiceDate range
+    if (invoiceDate) {
+      const [start, end] = invoiceDate.split(" - ");
       const startDate = new Date(`${start}T00:00:00.000Z`);
       const endDate = new Date(`${end}T23:59:59.999Z`);
       query["invoice.invdate"] = {
@@ -117,52 +191,51 @@ exports.fetchCustomerBilling = async (req, res) => {
       };
     }
 
-    if (invoiceDate) {
-      const startDate = new Date(`${invoiceDate}T00:00:00.000Z`);
-      const endDate = new Date(`${invoiceDate}T23:59:59.999Z`);
-      query["invoice.invdate"] = {
-        $gte: startDate,
-        $lt: endDate,
+    // Handle emailSentDate range
+    if (emailSentDate) {
+      const [start, end] = emailSentDate.split(" - ");
+      const startDate = new Date(`${start}T00:00:00.000Z`);
+      const endDate = new Date(`${end}T23:59:59.999Z`);
+      query["emailSendDate"] = {
+        $gte: startDate.toISOString(),
+        $lt: endDate.toISOString(),
       };
     }
 
+    // Handle emailSent search with multiple values
     if (emailSent) {
-      query["emailSent"] = {
-        $in: emailSent.split(","),
-      };
+      const emailSentArray = emailSent.split(",").map((item) => item.trim());
+      if (emailSentArray.length === 1) {
+        query["sentTo"] = { $regex: emailSentArray[0], $options: "i" };
+      } else {
+        query["sentTo"] = {
+          $in: emailSentArray.map(item => new RegExp(item, "i"))
+        };
+      }
     }
 
-    // if (billingStatus === 'EMAIL_READ') {
-    //   query["customerDownloadHistory"] = { $gt: [{ $size: "$customerDownloadHistory" }, 0] };
-    // } else if (billingStatus === 'EMAIL_SENT') {
-    //   query["customerDownloadHistory"] = { $size: 0 };
-    // } {
-    //   query["billingStatus"] = billingStatus;
-    // }
-
+    // Handle billing status
     if (billingStatus) {
       if (billingStatus === "EMAIL_READ") {
         query["customerDownloadHistory"] = {
           $gt: [{ $size: "$customerDownloadHistory" }, 0],
         };
         query["$or"] = [
-          { billingStatus: { $exists: false } }, // Kondisi ketika `billingStatus` tidak ada
-          { billingStatus: { $ne: "PAID" } }, // Kondisi ketika `billingStatus` bukan "PAID"
+          { billingStatus: { $exists: false } },
+          { billingStatus: { $ne: "PAID" } },
         ];
       } else if (billingStatus === "UNPAID") {
         query["customerDownloadHistory"] = { $size: 0 };
         query["$or"] = [
-          { billingStatus: { $exists: false } }, // Kondisi ketika `billingStatus` tidak ada
-          { billingStatus: { $ne: "PAID" } }, // Kondisi ketika `billingStatus` bukan "PAID"
+          { billingStatus: { $exists: false } },
+          { billingStatus: { $ne: "PAID" } },
         ];
       } else if (billingStatus === "REJECTED") {
         query["isRejected"] = true;
       } else {
-        query["billingStatus"] = billingStatus; // CANCELLED Situation handled on here
+        query["billingStatus"] = billingStatus;
       }
     }
-
-    console.log("query", query);
 
     if (id) {
       query["_id"] = new ObjectId(id);
@@ -172,22 +245,19 @@ exports.fetchCustomerBilling = async (req, res) => {
       query["logId"] = new ObjectId(logId);
     }
 
-    // Filter by account id
-    const clonedUser = JSON.parse(JSON.stringify(req.user));
-
-    if (req.query.accountID) {
-      query["accountID"] = { $eq: req.query.accountID };
-    } else {
-
-      if (req.user.role == 'USER') {
+    // Filter by account id - only apply for USER role
+    // SUPER_ADMIN and ADMIN can see all data
+    if (req.user.role === 'USER') {
+      // If USER didn't search by accountID, restrict to their assigned accountIDs
+      if (!req.query.accountID && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
         query["accountID"] = { $in: clonedUser.accountID };
       }
-
+      // If USER searched by accountID, validation already handled above (line 87-115)
     }
-    console.log({
-      req: req.user,
-      clonedUser,
-    });
+    // For SUPER_ADMIN and ADMIN, no accountID restriction unless they explicitly search for it
+
+    console.log("Final query for fetchCustomerBilling:", JSON.stringify(query, null, 2));
+    console.log("User role:", req.user.role);
     // query["billingStatus"] = { $ne: "CANCELLED" };
 
     const db = mongoose.connection;
@@ -548,7 +618,7 @@ exports.exports = async (req, res) => {
   }
 
   if (reportType === "CURRENT") {
-    const query = buildBillingSearchQuery(searchParam);
+    const query = exports.buildBillingSearchQuery(searchParam);
     billings = await collection.find(query).toArray();
   } else if (reportType === "MULTIPLE_ROW") {
     if (!selectedIds) {
@@ -613,7 +683,7 @@ exports.exports = async (req, res) => {
   res.download(fileName);
 };
 
-const buildBillingSearchQuery = (params) => {
+exports.buildBillingSearchQuery = (params) => {
   const {
     accountID,
     customerName,
@@ -801,7 +871,7 @@ exports.exportsCustomerBilling = async (req, res) => {
   }
 
   if (reportType === "CURRENT") {
-    const query = buildBillingSearchQuery(searchParam);
+    const query = exports.buildBillingSearchQuery(searchParam);
     
     // Add account filter for non-superadmin users
     if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {

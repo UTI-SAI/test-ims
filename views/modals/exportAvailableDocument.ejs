@@ -64,3 +64,33 @@
         </form>
     </div>
 </div>
+
+<script>
+    document.addEventListener("DOMContentLoaded", () => {
+        // Handle form submission - clear selections after export
+        const exportForm = document.querySelector("#modal-export-document form");
+        const exportSubmitBtn = document.querySelector("#modal-export-document button[type='submit']");
+        
+        if (exportSubmitBtn) {
+            exportSubmitBtn.addEventListener("click", function(e) {
+                // Clear selections after a short delay to allow form submission
+                setTimeout(function() {
+                    // Clear localStorage
+                    localStorage.removeItem('billingSelectedItems');
+                    console.log('Cleared billingSelectedItems after export');
+                    
+                    // Trigger clearAllSelections in Alpine.js component
+                    const tableComponent = document.querySelector('[x-data]');
+                    if (tableComponent && tableComponent.__x && tableComponent.__x.$data.clearAllSelections) {
+                        tableComponent.__x.$data.clearAllSelections();
+                    }
+                    
+                    // Reload page to refresh UI
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 500);
+                }, 200);
+            });
+        }
+    });
+</script>
