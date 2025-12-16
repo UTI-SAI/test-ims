@@ -75,17 +75,36 @@
         const ids = <%- JSON.stringify(ids) %>;
         let current = 0;
         
-        function goBack() {
-            window.history.back();
-        }
+        // Define functions in global scope
+        window.goBack = function() {
+            // Try to go back to parent window if opened from modal
+            if (window.opener && !window.opener.closed) {
+                window.opener.focus();
+                window.close();
+            } else {
+                // Otherwise use history back or close
+                if (window.history.length > 1) {
+                    window.history.back();
+                } else {
+                    window.close();
+                }
+            }
+        };
+        
+        window.closeTab = function() {
+            window.close();
+        };
         
         function downloadNext() {
             if (current >= ids.length) {
-                document.querySelector('.container').innerHTML = 
+                const container = document.querySelector('.container');
+                container.innerHTML = 
                     '<h2 style="color: #27ae60;">✓ Complete!</h2>' +
                     '<p>All ' + ids.length + ' invoices have been downloaded.</p>' +
-                    '<button onclick="goBack()" class="btn-primary">Back to Billing</button>' +
-                    '<button onclick="window.close()" class="btn-secondary">Try Close Tab</button>';
+                    '<div style="margin-top: 20px;">' +
+                    '<button onclick="window.goBack()" class="btn-primary">Back to Billing</button>' +
+                    '<button onclick="window.closeTab()" class="btn-secondary">Close Tab</button>' +
+                    '</div>';
                 return;
             }
             

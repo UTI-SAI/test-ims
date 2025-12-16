@@ -192,7 +192,71 @@ document.addEventListener("DOMContentLoaded", () => {
                 exportSubmitBtn.disabled = true;
                 exportSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
                 
-                // Send POST request
+                // Special handling for MULTIPLE_INVOICE - open in new tab for PDF downloads
+                if (reportType === 'MULTIPLE_INVOICE') {
+                    // Create form and submit to new tab
+                    const form = document.createElement('form');
+                    form.method = 'POST';
+                    form.action = '/billing/exports';
+                    form.target = '_blank';
+                    
+                    const typeInput = document.createElement('input');
+                    typeInput.type = 'hidden';
+                    typeInput.name = 'reportType';
+                    typeInput.value = reportType;
+                    form.appendChild(typeInput);
+                    
+                    const queryInput = document.createElement('input');
+                    queryInput.type = 'hidden';
+                    queryInput.name = 'queryString';
+                    queryInput.value = queryString;
+                    form.appendChild(queryInput);
+                    
+                    const idsInput = document.createElement('input');
+                    idsInput.type = 'hidden';
+                    idsInput.name = 'selectedIds';
+                    idsInput.value = selectedIds;
+                    form.appendChild(idsInput);
+                    
+                    document.body.appendChild(form);
+                    form.submit();
+                    document.body.removeChild(form);
+                    
+                    // Clear selections
+                    localStorage.removeItem('billingSelectedItems');
+                    console.log('Cleared billingSelectedItems after multiple invoice export');
+                    
+                    // Trigger clearAllSelections in Alpine.js component
+                    const tableComponent = document.querySelector('[x-data]');
+                    if (tableComponent && tableComponent.__x && tableComponent.__x.$data.clearAllSelections) {
+                        tableComponent.__x.$data.clearAllSelections();
+                    }
+                    
+                    // Close modal
+                    const modalElement = document.getElementById('modal-export-billing');
+                    const modal = bootstrap.Modal.getInstance(modalElement);
+                    if (modal) {
+                        modal.hide();
+                    }
+                    
+                    // Show info message
+                    Swal.fire({
+                        icon: "info",
+                        title: "Opening Download Page",
+                        text: "PDF invoices will be downloaded in a new tab.",
+                        timer: 2000,
+                        showConfirmButton: false
+                    });
+                    
+                    // Reload page to refresh UI
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 2000);
+                    
+                    return;
+                }
+                
+                // Send POST request for Excel exports
                 const response = await fetch('/billing/exports', {
                     method: 'POST',
                     headers: {
@@ -231,7 +295,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 document.body.removeChild(a);
                 
                 // Clear selections after successful export (for multiple selection types)
-                if (reportType === 'MULTIPLE_INVOICE' || reportType === 'MULTIPLE_ROW') {
+                if (reportType === 'MULTIPLE_ROW') {
                     localStorage.removeItem('billingSelectedItems');
                     console.log('Cleared billingSelectedItems after multiple selection export');
                     
