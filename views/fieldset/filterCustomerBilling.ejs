@@ -83,3 +83,23 @@
         </div>
     </fieldset>
 </form>
+
+<script>
+    // Remove spaces in comma-separated fields before form submission
+    document.querySelector('form[action="/customer-document"]').addEventListener('submit', function(e) {
+        const commaFields = ['pic', 'accountID', 'clNumber', 'invoiceNo', 'emailSent'];
+        
+        commaFields.forEach(fieldName => {
+            const field = this.querySelector(`input[name="${fieldName}"]`);
+            if (field && field.value) {
+                // Remove all spaces around commas and filter out empty strings
+                const cleanedValue = field.value
+                    .split(',')
+                    .map(item => item.trim())
+                    .filter(item => item !== '')
+                    .join(',');
+                field.value = cleanedValue;
+            }
+        });
+    });
+</script>
