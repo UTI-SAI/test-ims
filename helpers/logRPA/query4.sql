@@ -1,4 +1,5 @@
 select 
+  TOP 200
   clnumber, 
   invdate, 
   customer, 
@@ -41,6 +42,4 @@ from
   and d.receipt_no = e.tran_no 
   left join cdi_invoice_hdr f (nolock) on a.invoiceno = f.tran_no 
   and a.ouid = f.tran_ou 
-where 
-  c.addr_address_id = 'BI' 
-  and clnumber = '{CL_NUMBER}' 
+where clnumber = '{CL_NUMBER}' 
