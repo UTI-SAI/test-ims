@@ -42,8 +42,7 @@ from
   and d.receipt_no = e.tran_no 
   left join cdi_invoice_hdr f (nolock) on a.invoiceno = f.tran_no 
   and a.ouid = f.tran_ou 
-where
-  and clnumber = '{CL_NUMBER}' 
+where clnumber = '{CL_NUMBER}' 
   AND (
     CASE WHEN charindex('/', comments) = 0 THEN comments ELSE left(
       comments, 

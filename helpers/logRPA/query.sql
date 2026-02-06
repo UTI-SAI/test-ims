@@ -37,6 +37,5 @@ from
   and invoice_no = a.invoiceno 
   left join ci_doc_balance e (nolock) on d.receipt_ou = e.tran_ou 
   and d.receipt_no = e.tran_no 
-where
-  and a.clnumber = '{CL_NUMBER}' 
+where a.clnumber = '{CL_NUMBER}' 
   and a.invoiceno = '{INVOICE_NO}'
