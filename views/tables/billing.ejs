@@ -219,15 +219,17 @@
                             </a>
                         </td>
                         <td class="text-muted text-center">
-                            <% if (bill.customerDownloadHistory.length> 0) { %>
+                            <%
+                                // Filter out super@admin.com entries
+                                const customerDownloads = bill.customerDownloadHistory.filter(file => file.email !== 'super@admin.com');
+                            %>
+                            <% if (customerDownloads.length > 0) { %>
                                 <ul style="text-align: left;">
-                                    <% for (const file of bill.customerDownloadHistory) { %>
-                                        <% if (file.email !== 'super@admin.com') { %>
+                                    <% for (const file of customerDownloads) { %>
                                         <li>
                                             <small><code><%= file.email %> - </code></small>
                                             <small><code><%= moment(file.date).format("MM/DD/YYYY") %></code></small>
                                         </li>
-                                        <% } %>
                                     <% } %>
                                 </ul>
                             <% } else { %>

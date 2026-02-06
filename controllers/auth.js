@@ -40,11 +40,10 @@ exports.handleLogin = (req, res, next) => {
 exports.forgotPassword = async (req, res) => {
   if (req.method === "POST") {
     const { email } = req.body;
-    const user = await User.findOne()
-      .where("email")
-      .equals(email)
-      .where("role")
-      .ne("SUPER_ADMIN");
+    const user = await User.findOne({
+      email: { $regex: new RegExp(`^${email}$`, 'i') },
+      role: { $ne: "SUPER_ADMIN" }
+    });
     if (!user?._id) {
       req.flash("error", "User not found.");
     } else {
