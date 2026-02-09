@@ -5,8 +5,9 @@ const User = require("./models/User");
 module.exports = function (passport) {
   passport.use(
     new LocalStrategy({ usernameField: "email" }, (email, password, done) => {
-      // Match user (case-insensitive)
-      User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } })
+      // Match user (case-sensitive - exact match)
+      // User.findOne({ email: { $regex: new RegExp(`^${email}$`, 'i') } })
+      User.findOne({ email: email })
         .then((user) => {
           if (!user) {
             return done(null, false, {
