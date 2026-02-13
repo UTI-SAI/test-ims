@@ -486,7 +486,7 @@ exports.downloadInvoice = async (req, res) => {
     // Tentukan path file PDF yang valid (coba "Result" dulu, lalu "Archive - Paid Invoice")
     const candidates = [
       `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
-      `\\\\CKB-A0000036932\\Archive - Paid Invoice\\${monthDirPath}\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\${monthDirPath}\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
     ];
 
     // Normalisasi + cek eksistensi
