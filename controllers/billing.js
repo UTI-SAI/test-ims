@@ -300,6 +300,7 @@ exports.fetchCustomerBilling = async (req, res) => {
 exports.attachFile = async (req, res) => {
   try {
     const { clNumber, uploadedFileName } = req.body;
+    const normalizedClNumber = (clNumber || "").trim();
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
@@ -312,7 +313,7 @@ exports.attachFile = async (req, res) => {
       const files = await listFilesInDirectory("uploads");
 
       const filteredFiles = files
-        .filter((file) => file.name.includes(clNumber))
+        .filter((file) => file.name.toLowerCase().includes(normalizedClNumber.toLowerCase()))
         .sort((a, b) => b.addedDate - a.addedDate);
 
       summaryFile = filteredFiles.length > 0 ? filteredFiles[0] : null;
@@ -320,7 +321,7 @@ exports.attachFile = async (req, res) => {
 
     if (summaryFile) {
       const result = await collection.updateMany(
-        { clnumber: clNumber },
+        { clnumber: normalizedClNumber },
         { $set: { excelSummaryInvoice: summaryFile.name } }
       );
 
@@ -332,10 +333,10 @@ exports.attachFile = async (req, res) => {
       );
 
       if (result.matchedCount === 0) {
-        console.warn(`No documents found with clnumber: ${clNumber}`);
+        console.warn(`No documents found with clnumber: ${normalizedClNumber}`);
       }
     } else {
-      console.warn(`No file found for clNumber: ${clNumber}`);
+      console.warn(`No file found for clNumber: ${normalizedClNumber}`);
     }
 
     return res.redirect("/billing");
