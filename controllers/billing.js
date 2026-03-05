@@ -298,39 +298,45 @@ exports.fetchCustomerBilling = async (req, res) => {
 };
 
 exports.attachFile = async (req, res) => {
-  const { clNumber } = req.body;
+  try {
+    const { clNumber } = req.body;
 
-  const db = mongoose.connection;
-  const collection = db.collection("billing");
+    const db = mongoose.connection;
+    const collection = db.collection("billing");
 
-  const files = await listFilesInDirectory("uploads");
+    const files = await listFilesInDirectory("uploads");
 
-  const filteredFiles = files
-    .filter((file) => file.name.includes(clNumber))
-    .sort((a, b) => b.addedDate - a.addedDate);
+    const filteredFiles = files
+      .filter((file) => file.name.includes(clNumber))
+      .sort((a, b) => b.addedDate - a.addedDate);
 
-  const summaryFile = filteredFiles.length > 0 ? filteredFiles[0] : null;
+    const summaryFile = filteredFiles.length > 0 ? filteredFiles[0] : null;
 
-  if (summaryFile) {
-    await collection.updateMany(
-      { clnumber: clNumber },
-      { $set: { excelSummaryInvoice: summaryFile.name } },
-      (err, result) => {
-        if (err) {
-          console.error("Error:", err);
-        } else {
-          console.log(
-            "Matched:",
-            result.matchedCount,
-            "Modified:",
-            result.modifiedCount
-          );
-        }
+    if (summaryFile) {
+      const result = await collection.updateMany(
+        { clnumber: clNumber },
+        { $set: { excelSummaryInvoice: summaryFile.name } }
+      );
+
+      console.log(
+        "Matched:",
+        result.matchedCount,
+        "Modified:",
+        result.modifiedCount
+      );
+
+      if (result.matchedCount === 0) {
+        console.warn(`No documents found with clnumber: ${clNumber}`);
       }
-    );
-  }
+    } else {
+      console.warn(`No file found for clNumber: ${clNumber}`);
+    }
 
-  return res.redirect("/billing");
+    return res.redirect("/billing");
+  } catch (error) {
+    console.error("Error in attachFile:", error);
+    return res.redirect("/billing");
+  }
 };
 
 exports.cancel = async (req, res) => {
