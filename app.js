@@ -114,8 +114,8 @@ mongoose
   .catch((error) => console.error("MongoDB connection error:", error));
 
 
-app.use('/uploads', express.static('uploads'));
-app.use('/invoices', express.static('invoices'));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+app.use('/invoices', express.static(path.join(__dirname, 'invoices')));
 
 
 // Set up routes

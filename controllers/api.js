@@ -427,7 +427,14 @@ exports.retrieveInvoice = async (req, res) => {
 };
 
 exports.uploadInvoiceFile = async (req, res) => {
-  res.json({ message: 'File uploaded successfully' });
+  if (!req.file || !req.file.filename) {
+    return res.status(400).json({ message: 'File upload failed' });
+  }
+
+  res.json({
+    message: 'File uploaded successfully',
+    filename: req.file.filename,
+  });
 };
 
 exports.downloadInvoice = async (req, res) => {
