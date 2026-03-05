@@ -5,7 +5,7 @@ const listFilesInDirectory = async (relativeOrAbsolutePath) => {
   try {
     const fullPath = path.isAbsolute(relativeOrAbsolutePath)
       ? relativeOrAbsolutePath
-      : path.join(process.cwd(), relativeOrAbsolutePath);
+      : path.resolve(__dirname, "..", relativeOrAbsolutePath);
 
     const files = await fs.readdir(fullPath);
     const fileDetails = await Promise.all(

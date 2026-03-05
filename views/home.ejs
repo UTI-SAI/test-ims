@@ -162,6 +162,9 @@
         <script>
 
             document.addEventListener("DOMContentLoaded", function () {
+                const uploadForm = document.querySelector('form[action="/billing/attach-file"]');
+                const uploadedFileNameInput = document.getElementById("uploadedFileName");
+
                 let dropzoneInstance = new Dropzone("#dropzone-custom", {
                     maxFiles: 1,
                     url: '/api/invoices/upload-file',
@@ -180,6 +183,31 @@
                 dropzoneInstance.on("sending", function (file, xhr, formData) {
                     formData.append("filename", clNumber);
                 });
+
+                dropzoneInstance.on("success", function (file, response) {
+                    if (uploadedFileNameInput) {
+                        uploadedFileNameInput.value = response?.filename || "";
+                    }
+                });
+
+                dropzoneInstance.on("removedfile", function () {
+                    if (uploadedFileNameInput) {
+                        uploadedFileNameInput.value = "";
+                    }
+                });
+
+                if (uploadForm) {
+                    uploadForm.addEventListener("submit", function (event) {
+                        const hasFileInQueue = dropzoneInstance.files.length > 0;
+                        const isUploading = dropzoneInstance.getUploadingFiles().length > 0 || dropzoneInstance.getQueuedFiles().length > 0;
+                        const hasUploadedFileName = uploadedFileNameInput && uploadedFileNameInput.value;
+
+                        if (hasFileInQueue && (isUploading || !hasUploadedFileName)) {
+                            event.preventDefault();
+                            Swal.fire('Please wait', 'File masih diupload. Coba lagi setelah upload selesai.', 'info');
+                        }
+                    });
+                }
 
                 document.getElementById("clear-dropzone").addEventListener("click", function () {
                     dropzoneInstance.removeAllFiles(true);

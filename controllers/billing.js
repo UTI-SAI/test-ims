@@ -299,18 +299,24 @@ exports.fetchCustomerBilling = async (req, res) => {
 
 exports.attachFile = async (req, res) => {
   try {
-    const { clNumber } = req.body;
+    const { clNumber, uploadedFileName } = req.body;
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
 
-    const files = await listFilesInDirectory("uploads");
+    let summaryFile = null;
 
-    const filteredFiles = files
-      .filter((file) => file.name.includes(clNumber))
-      .sort((a, b) => b.addedDate - a.addedDate);
+    if (uploadedFileName) {
+      summaryFile = { name: uploadedFileName };
+    } else {
+      const files = await listFilesInDirectory("uploads");
 
-    const summaryFile = filteredFiles.length > 0 ? filteredFiles[0] : null;
+      const filteredFiles = files
+        .filter((file) => file.name.includes(clNumber))
+        .sort((a, b) => b.addedDate - a.addedDate);
+
+      summaryFile = filteredFiles.length > 0 ? filteredFiles[0] : null;
+    }
 
     if (summaryFile) {
       const result = await collection.updateMany(
