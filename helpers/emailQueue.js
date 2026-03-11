@@ -15,7 +15,6 @@
 
 const mongoose = require("mongoose");
 const MongoDBQueue = require('@openwar/mongodb-queue');
-const sendEmail = require("./sendEmail.js");
 
 
 exports.mongoQueue = async () => {
@@ -46,16 +45,20 @@ exports.addQueue = async (queue, task) => {
 exports.queueManager = async () => {
     try {
         const queue = await this.mongoQueue();
-        const db = mongoose.connection
+        const db = mongoose.connection;
         const collection = await db.collection("emailSchaduler");
         const tasks = await collection.find({ "payload.status": "in-progress" }).toArray();
-        if (tasks) {
-            for (const task of tasks) {
-                console.info(`Email task with ID: ${task._id} has been processed`);
-                await sendEmail.processQueue(queue, task);
+        if (tasks.length > 0) {
+            console.info(`[EMAIL_QUEUE] Found ${tasks.length} in-progress tasks`);
+            const sendEmail = require("./sendEmail.js");
+            for (let i = 0; i < tasks.length; i++) {
+                console.info(`[EMAIL_QUEUE] Processing recovery task ${i + 1}/${tasks.length} with ID: ${tasks[i]._id}`);
+                await sendEmail.processQueue(queue);
             }
+        } else {
+            console.info("[EMAIL_QUEUE] No in-progress tasks to recover");
         }
     } catch (error) {
-        console.error(error);
+        console.error("[EMAIL_QUEUE] queueManager error:", error);
     }
 };
