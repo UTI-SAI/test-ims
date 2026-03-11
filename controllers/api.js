@@ -615,9 +615,19 @@ exports.getStatusEmail = async (req, res) => {
       return res.status(404).json({ message: 'Task email not found' });
     }
     const status = task?.payload?.status;
+    const failedError = task?.payload?.error || null;
+    const sentAt = task?.payload?.sentAt || null;
+    const failedAt = task?.payload?.failedAt || null;
+    const enqueuedAt = task?.payload?.enqueuedAt || null;
     return res.json({
       message: 'Successfully',
-      data: { status },
+      data: {
+        status,
+        enqueuedAt,
+        sentAt,
+        failedAt,
+        error: failedError,
+      },
     });
   } catch (error) {
     console.log(error);
