@@ -3,7 +3,7 @@ const path = require("path");
 const moment = require("moment");
 const sendEmail = require("./sendEmail");
 
-const sendInvoiceRPA = async (user, invoice, email, cc, instansi="") => {
+const sendInvoiceRPA = async (user, invoice, email, cc, instansi="", emailFooter="") => {
   try {
     const { HOST } = process.env;
     const URL = `${HOST}/customer-document?clNumber=${invoice.clnumber.toString()}`;
@@ -23,6 +23,7 @@ const sendInvoiceRPA = async (user, invoice, email, cc, instansi="") => {
     emailHtml = emailHtml.replace("{CL_NUMBER}", invoice.clnumber);
     // emailHtml = emailHtml.replace("{AMOUNT}", invoice.invamount);
     emailHtml = emailHtml.replace("{INVOICE_URL}", URL);
+    emailHtml = emailHtml.replace("{FOOTER}", emailFooter);
 
     const formattedInvoiceDate = moment(invoice.invdate).format("DD MMM YY");
 

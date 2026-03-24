@@ -18,7 +18,7 @@ exports.sendInvoiceEmail = async (req, res) => {
   console.info(`[${requestId}] Starting sendInvoiceEmail process`);
 
   try {
-    const { clNumber, subject, invoiceNo, ignoreEmail, isResend } = req.body;
+    const { clNumber, subject, invoiceNo, ignoreEmail, isResend, category } = req.body;
     const cc = req?.body?.cc || null;
 
     console.info(`[${requestId}] Request payload:`, {
@@ -27,7 +27,8 @@ exports.sendInvoiceEmail = async (req, res) => {
       invoiceNo: Array.isArray(invoiceNo) ? invoiceNo.length : invoiceNo,
       ignoreEmail,
       isResend,
-      cc
+      cc,
+      category
     });
 
     // Bug Fix #1: Validate clNumber
@@ -48,7 +49,7 @@ exports.sendInvoiceEmail = async (req, res) => {
     const rpa = db.collection('logRPA');
 
     console.info(`[${requestId}] Checking existing RPA logs for clNumber: ${clNumber}`);
-    const checkRPA = await rpa
+    let checkRPA = await rpa
       .find({
         clNumber,
       })
@@ -61,12 +62,53 @@ exports.sendInvoiceEmail = async (req, res) => {
       console.warn(`[${requestId}] No RPA logs found, looking up from RPA server...`);
       try {
         await lookUpRPA(clNumber, invoiceNo);
+
+        checkRPA = await rpa.find({ clNumber }).toArray();
+
         console.info(`[${requestId}] RPA lookup completed successfully`);
       } catch (lookupError) {
         console.error(`[${requestId}] RPA lookup failed:`, lookupError);
         // Continue execution - this might not be fatal
       }
     }
+
+    // generate email footer
+    const generateEmailFooter = (cat) => {
+      if (cat === '3rdparty') {
+        return `
+        <div class='footer'>
+          <h1>General Information</h1>
+          <h2>1. Login Access</h2>
+          <p>Please use the following credentials to log in:</p>
+          <p>
+            <b>User ID</b>: Your registered email address in CKB<br/>
+            <b>Password</b>: Your registered email address in CKB<br/>
+          </p>
+          <p>
+            <b>Note</b>: You will be required to change your password upon your first login.
+          </p>
+        </div>
+        `
+      } else {
+        return `
+        <div class='footer'>
+          <h1>General Information</h1>
+          <h2>1. Login Access</h2>
+          <p>Please use the following credentials to log in:</p>
+          <p>
+            <b>User ID</b>: Your registered email address><br/>
+            <b>Password</b>: Your registered password><br/>
+          </p>
+          <p>
+            <b>Note</b>: You will be required to change your password upon your first login.
+          </p>
+          <h2>2. TMT Group</h2>
+          <p>Specifically for customer under Tiara Marga Trakindo (TMT) Group, the use of Global Protection is not required.</p>
+        </div>
+        `
+      }
+    }
+    const emailFooter = generateEmailFooter(category);
 
     console.info(`[${requestId}] Fetching RPA logs after lookup...`);
     let logsResult = await rpa
@@ -234,7 +276,8 @@ exports.sendInvoiceEmail = async (req, res) => {
           logs.invoiceDetail,
           mainEmail,
           cc,
-          instansi
+          instansi,
+          emailFooter
         );
         console.info(`[${requestId}] Email task created with ID: ${taskId}`);
       } catch (emailError) {
