@@ -95,6 +95,12 @@ router.post(
   apiController.cancelCL
 );
 
+router.post(
+  "/invoices/cancel",
+  ensureAPIKey,
+  apiController.cancelInvoicesBulk
+);
+
 /**
  * @swagger
  * /api/invoices:
