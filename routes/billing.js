@@ -23,6 +23,18 @@ router.post(
 );
 
 router.post(
+  "/reject",
+  ensureRoles(ROLES.SUPER_ADMIN),
+  billingController.rejectInvoiceByAdmin
+);
+
+router.post(
+  "/cancel-reject",
+  ensureRoles(ROLES.SUPER_ADMIN, ROLES.USER),
+  billingController.cancelReject
+);
+
+router.post(
   "/exports",
   ensureRoles(ROLES.SUPER_ADMIN),
   billingController.exports

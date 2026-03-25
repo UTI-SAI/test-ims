@@ -186,15 +186,7 @@
                             <%= bill.cloCustName %>
                         </td>
                         <td>
-                            <% if (bill.billingStatus==='CANCELLED' || bill.isRejected) { %>
-                                <a href="#" @click="fillBillingData(JSON.parse($el.getAttribute('data-item')))"
-                                    :data-item="'<%= JSON.stringify(bill) %>'" data-bs-toggle="modal"
-                                    data-bs-target="#modal-reason-billing">
-                                    <%= bill.invoice.clnumber %>
-                                </a>
-                                <% } else { %>
-                                    <%= bill.invoice.clnumber %>
-                                        <% } %>
+                            <%= bill.invoice.clnumber %>
                         </td>
                         <td><code><%= moment(bill.invoice.cldate).format("MM/DD/YYYY") %></code></td>
                         <td class="text-muted">
@@ -303,9 +295,9 @@
                                     -
                                     <% } %>
                         </td>
-                        <td class="flex d-flex justify-content-between">
+                        <td class="flex d-flex justify-content-between" style="gap: 5px;">
                             <button type="button" class="btn btn-md" data-bs-toggle="modal"
-                                data-bs-target="#modal-manual-billing" style="margin-right: 5px;"
+                                data-bs-target="#modal-manual-billing"
                                 @click="fillBillingData(<%= JSON.stringify(bill) %>)">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-pencil"
                                     width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
@@ -320,7 +312,7 @@
                                 Manual
                             </button>
                             <button type="button" class="btn btn-md btn-success" data-bs-toggle="modal"
-                                data-bs-target="#modal-upload-billing" style="margin-right: 5px;"
+                                data-bs-target="#modal-upload-billing"
                                 @click="fillBillingData(<%= JSON.stringify(bill) %>)">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-cloud-upload"
                                     width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
@@ -345,6 +337,34 @@
                                 </svg>
                                 Resend Email
                             </button>
+                            <% if (bill.isRejected && bill.billingStatus !== 'CANCELLED') { %>
+                            <button type="button" class="btn btn-md btn-warning" data-bs-toggle="modal"
+                                data-bs-target="#modal-cancel-reject" @click="fillBillingData(<%= JSON.stringify(bill) %>)">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh-alert"
+                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
+                                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>
+                                    <path d="M12 9l4 4"></path>
+                                </svg>
+                                Cancel Reject
+                            </button>
+                            <% } else if (!bill.isRejected && bill.billingStatus !== "PAID" && bill.billingStatus !== 'CANCELLED') { %>
+                            <button type="button" class="btn btn-danger btn-xs" data-bs-toggle="modal"
+                                data-bs-target="#modal-reject-invoice-admin"
+                                @click="fillBillingData(JSON.parse($el.getAttribute('data-item')))"
+                                :data-item="'<%= JSON.stringify(bill) %>'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban"
+                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
+                                    <path d="M5.7 5.7l12.6 12.6"></path>
+                                </svg>
+                                Reject
+                            </button>
+                            <% } %>
                         </td>
                     </tr>
                     <% } %>

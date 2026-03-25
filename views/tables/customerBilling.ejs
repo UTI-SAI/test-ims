@@ -284,7 +284,22 @@
                                     <% } %>
                         </td>
                         <td class="flex-nowrap">
-                            <% if (!bill.isRejected && bill.billingStatus !="PAID" ) { %>
+                            <% if (bill.isRejected && bill.billingStatus !== 'CANCELLED') { %>
+                            <button type="button" class="btn btn-warning btn-xs" data-bs-toggle="modal"
+                                data-bs-target="#modal-cancel-reject"
+                                @click="fillInvoiceData(JSON.parse($el.getAttribute('data-item')))"
+                                :data-item="'<%= JSON.stringify(bill) %>'">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh-alert"
+                                    width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
+                                    fill="none" stroke-linecap="round" stroke-linejoin="round">
+                                    <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
+                                    <path d="M20 11a8.1 8.1 0 0 0 -15.5 -2m-.5 -4v4h4"></path>
+                                    <path d="M4 13a8.1 8.1 0 0 0 15.5 2m.5 4v-4h-4"></path>
+                                    <path d="M12 9l4 4"></path>
+                                </svg>
+                                Cancel Reject
+                            </button>
+                            <% } else if (!bill.isRejected && bill.billingStatus !== "PAID" && bill.billingStatus !== 'CANCELLED') { %>
                                 <button type="button" class="btn btn-danger btn-xs" data-bs-toggle="modal"
                                     data-bs-target="#modal-reject-invoice-customer"
                                     @click="fillInvoiceData(JSON.parse($el.getAttribute('data-item')))"
@@ -298,19 +313,7 @@
                                     </svg>
                                     Reject
                                 </button>
-                                <% } else { %>
-                                    <button type="button" class="btn btn-danger btn-xs" disabled>
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban"
-                                            width="24" height="24" viewBox="0 0 24 24" stroke-width="2"
-                                            stroke="currentColor" fill="none" stroke-linecap="round"
-                                            stroke-linejoin="round">
-                                            <path stroke="none" d="M0 0h24v24H0z" fill="none"></path>
-                                            <path d="M12 12m-9 0a9 9 0 1 0 18 0a9 9 0 1 0 -18 0"></path>
-                                            <path d="M5.7 5.7l12.6 12.6"></path>
-                                        </svg>
-                                        Reject
-                                    </button>
-                                    <% } %>
+                                <% } %>
                         </td>
                     </tr>
                     <% } %>
