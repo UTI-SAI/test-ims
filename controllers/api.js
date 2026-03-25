@@ -412,6 +412,100 @@ exports.cancelCL = async (req, res) => {
   res.json({ message: 'Invoice cancelled successfully' });
 };
 
+exports.cancelInvoicesBulk = async (req, res) => {
+  try {
+    const { items } = req.body || {};
+
+    if (!Array.isArray(items) || items.length === 0) {
+      return res.status(400).json({
+        message: 'Please provide items with format [{ clNumber, invoiceNo }]',
+      });
+    }
+
+    const pairs = [];
+    for (const item of items) {
+      const normalizedClNumber = String(item?.clNumber || '').trim();
+      const normalizedInvoiceNo = String(item?.invoiceNo || '').trim();
+
+      if (!normalizedClNumber || !normalizedInvoiceNo) {
+        return res.status(400).json({
+          message: 'Each item must include clNumber and invoiceNo',
+        });
+      }
+
+      pairs.push({
+        clnumber: normalizedClNumber,
+        invoiceno: normalizedInvoiceNo,
+      });
+    }
+
+    // Deduplicate pairs to avoid duplicate updates in same request.
+    const uniquePairs = [];
+    const seen = new Set();
+
+    for (const pair of pairs) {
+      const key = `${pair.clnumber}::${pair.invoiceno}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        uniquePairs.push(pair);
+      }
+    }
+
+    const db = mongoose.connection;
+    const billing = db.collection('billing');
+    const now = new Date().toISOString();
+
+    const CHUNK_SIZE = 500;
+    let totalMatchedCount = 0;
+    let totalModifiedCount = 0;
+
+    for (let i = 0; i < uniquePairs.length; i += CHUNK_SIZE) {
+      const chunk = uniquePairs.slice(i, i + CHUNK_SIZE);
+      const operations = chunk.map((pair) => ({
+        updateMany: {
+          filter: {
+            clnumber: pair.clnumber,
+            invoiceno: pair.invoiceno,
+          },
+          update: {
+            $set: {
+              isCancelled: true,
+              cancelledDate: now,
+              modifiedOn: now,
+              billingStatus: 'CANCELLED',
+            },
+          },
+        },
+      }));
+
+      const chunkResult = await billing.bulkWrite(operations, { ordered: false });
+      totalMatchedCount += chunkResult.matchedCount || 0;
+      totalModifiedCount += chunkResult.modifiedCount || 0;
+    }
+
+    if (totalMatchedCount === 0) {
+      return res.status(404).json({
+        message: 'Invoice not found for provided clNumber and invoiceNo',
+      });
+    }
+
+    return res.json({
+      message: 'Invoices updated to canceled successfully',
+      data: {
+        matchedCount: totalMatchedCount,
+        modifiedCount: totalModifiedCount,
+        requestedCount: pairs.length,
+        processedCount: uniquePairs.length,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return res.status(500).json({ error: 'Server error' });
+  }
+};
+
+exports.cancelInvoiceByClNumberInvoiceNo = exports.cancelInvoicesBulk;
+
 exports.retrieveInvoice = async (req, res) => {
   try {
     const { status, emailStatus } = req.query;
