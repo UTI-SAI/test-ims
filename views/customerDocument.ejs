@@ -5,10 +5,12 @@
     <script>
         document.addEventListener('alpine:init', () => {
             Alpine.data('customerBilling', () => ({
+                billing: {},
                 invoice: {},
                 fillInvoiceData(item) {
                     console.log('invoice', item)
                     this.invoice = item;
+                    this.billing = item;
                 },
             }));
         });
@@ -110,6 +112,9 @@
 
             <!-- Modal Export Billing -->
             <%- include('modals/exportCustomerBilling') -%>
+
+                <!-- Modal Cancel Reject -->
+                <%- include('modals/cancelReject') -%>
 
                 <script src="https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js"></script>
                 <script>

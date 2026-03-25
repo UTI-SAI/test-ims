@@ -26,7 +26,7 @@ exports.fetch = async (req, res) => {
       .toArray();
 
     billing.map((item) => {
-      if (item.rejectionReason) {
+      if (typeof item.rejectionReason === "string") {
         // Mengganti newline dengan spasi atau string kosong
         item.rejectionReason = item.rejectionReason.replace(/[\r\n]+/g, " "); // Ganti newline dengan spasi
       }
@@ -424,12 +424,30 @@ exports.rejectInvoice = async (req, res) => {
       });
     }
 
+    const newEntry = {
+      reason: rejectionReason.trim(),
+      date: new Date().toISOString(),
+      pic: req.user.email
+    };
+
+    let updatedRejectionReason;
+    if (typeof invoiceData.rejectionReason === 'string' && invoiceData.rejectionReason) {
+      updatedRejectionReason = [
+        { reason: invoiceData.rejectionReason, date: invoiceData.rejectedOn || null, pic: null },
+        newEntry
+      ];
+    } else if (Array.isArray(invoiceData.rejectionReason)) {
+      updatedRejectionReason = [...invoiceData.rejectionReason, newEntry];
+    } else {
+      updatedRejectionReason = [newEntry];
+    }
+
     const updateResult = await collection.updateOne(
       { _id: new ObjectId(id) },
       {
         $set: {
           isRejected: true,
-          rejectionReason: rejectionReason,
+          rejectionReason: updatedRejectionReason,
           rejectedOn: new Date().toISOString(),
           modifiedOn: new Date().toISOString(),
         },
@@ -602,6 +620,158 @@ exports.rejectInvoice = async (req, res) => {
   }
 };
 
+exports.cancelReject = async (req, res) => {
+  console.info("=== CANCEL REJECT PROCESS STARTED ===");
+  try {
+    const { reason, id } = req.body;
+    console.info("Request data received:", { reason, id });
+
+    const db = mongoose.connection;
+    const collection = db.collection("billing");
+    console.info("Database connection established");
+
+    // Get invoice data before updating
+    const invoiceData = await collection.findOne({ _id: new ObjectId(id) });
+    console.info("Invoice data found:", invoiceData ? "Yes" : "No");
+
+    if (!invoiceData) {
+      console.error("❌ Invoice not found with id:", id);
+      return res.status(404).send("Invoice not found");
+    }
+
+    // Check if it's currently rejected
+    if (!invoiceData.isRejected) {
+      console.error("❌ Invoice is not currently rejected:", id);
+      return res.status(400).send("Invoice is not rejected");
+    }
+
+    // Prepare cancel reject reason with timestamp
+    const cancelRejectEntry = {
+      reason: reason.trim(),
+      date: new Date().toISOString(),
+      pic: req.user.email
+    };
+
+    const updateResult = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          isRejected: false,
+          modifiedOn: new Date().toISOString(),
+        },
+        $push: {
+          cancelRejectReasons: cancelRejectEntry
+        }
+      }
+    );
+
+    console.info("Database update result:", {
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount
+    });
+
+    console.info("=== CANCEL REJECT PROCESS COMPLETED ===");
+
+    // Determine redirect based on referrer or default to customer-document
+    const referer = req.get('Referer');
+    if (referer && referer.includes('/billing?')) {
+      console.info("Redirecting to /billing");
+      return res.redirect("/billing");
+    } else {
+      console.info("Redirecting to /customer-document");
+      return res.redirect("/customer-document");
+    }
+  } catch (error) {
+    console.error("❌ CANCEL REJECT ERROR:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).send("Server error");
+  }
+};
+
+exports.rejectInvoiceByAdmin = async (req, res) => {
+  console.info("=== ADMIN REJECT INVOICE PROCESS STARTED ===");
+  try {
+    const { rejectionReason, id } = req.body;
+    console.info("Request data received:", { rejectionReason, id });
+
+    const db = mongoose.connection;
+    const collection = db.collection("billing");
+    console.info("Database connection established");
+
+    // Get invoice data before updating
+    const invoiceData = await collection.findOne({ _id: new ObjectId(id) });
+    console.info("Invoice data found:", invoiceData ? "Yes" : "No");
+
+    if (!invoiceData) {
+      console.error("❌ Invoice not found with id:", id);
+      return res.status(404).send("Invoice not found");
+    }
+
+    // Validate: cannot reject if already CANCELLED, PAID, or already rejected
+    if (invoiceData.billingStatus === 'CANCELLED') {
+      console.error("❌ Invoice is already cancelled:", id);
+      return res.status(400).send("Cannot reject cancelled invoice");
+    }
+
+    if (invoiceData.billingStatus === 'PAID') {
+      console.error("❌ Invoice is already paid:", id);
+      return res.status(400).send("Cannot reject paid invoice");
+    }
+
+    if (invoiceData.isRejected) {
+      console.error("❌ Invoice is already rejected:", id);
+      return res.status(400).send("Invoice is already rejected");
+    }
+
+    console.info("Invoice validation passed");
+
+    // Prepare rejection entry with timestamp and admin email
+    const newEntry = {
+      reason: rejectionReason.trim(),
+      date: new Date().toISOString(),
+      pic: req.user.email
+    };
+
+    // Handle rejectionReason field - maintain array structure or convert to array
+    let updatedRejectionReason;
+    if (typeof invoiceData.rejectionReason === 'string' && invoiceData.rejectionReason) {
+      updatedRejectionReason = [
+        { reason: invoiceData.rejectionReason, date: invoiceData.rejectedOn || null, pic: null },
+        newEntry
+      ];
+    } else if (Array.isArray(invoiceData.rejectionReason)) {
+      updatedRejectionReason = [...invoiceData.rejectionReason, newEntry];
+    } else {
+      updatedRejectionReason = [newEntry];
+    }
+
+    const updateResult = await collection.updateOne(
+      { _id: new ObjectId(id) },
+      {
+        $set: {
+          isRejected: true,
+          rejectionReason: updatedRejectionReason,
+          rejectedOn: new Date().toISOString(),
+          modifiedOn: new Date().toISOString(),
+        },
+      }
+    );
+
+    console.info("Database update result:", {
+      matchedCount: updateResult.matchedCount,
+      modifiedCount: updateResult.modifiedCount
+    });
+
+    console.info("=== ADMIN REJECT INVOICE PROCESS COMPLETED ===");
+
+    return res.redirect("/billing");
+  } catch (error) {
+    console.error("❌ ADMIN REJECT INVOICE ERROR:", error);
+    console.error("Error stack:", error.stack);
+    res.status(500).send("Server error");
+  }
+};
+
 exports.exports = async (req, res) => {
   try {
     const { HOST } = process.env;
@@ -689,6 +859,11 @@ exports.exports = async (req, res) => {
     { header: 'STATUS', key: 'status', width: 20 },
     { header: 'EXCEL SUMMARY INVOICE', key: 'excelSummaryInvoice', width: 50 },
     { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
+    { header: 'PIC REJECT', key: 'picReject', width: 30 },
+    { header: 'REJECT DATE', key: 'rejectionDates', width: 30 },
+    { header: 'REASON CANCEL REJECT', key: 'cancelRejectReason', width:  100},
+    { header: 'PIC CANCEL REJECT', key: 'picCancelReject', width: 30 },
+    { header: 'CANCEL REJECT DATE', key: 'cancelRejectDates', width: 30 },
   ];
 
   // Style header row
@@ -701,6 +876,36 @@ exports.exports = async (req, res) => {
 
   const flatData = billings.map((item) => {
     try {
+       let rejectionReason = '';
+      let picReject = '';
+      let rejectionDates = '';
+
+      if (item.rejectionReason.length > 0) {
+        let num = 1;
+        item.rejectionReason.forEach(reason => {
+          rejectionReason += `${num}. ${reason.reason}\n`;
+          picReject += `${num}. ${reason.pic || '-'}\n`;
+          rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+
+          num++;
+        })
+      }
+
+      let cancelRejectReason = '';
+      let picCancelReject = '';
+      let cancelRejectDates = '';
+
+      if (item.cancelRejectReasons?.length > 0) {
+        let num = 1;
+        item.cancelRejectReasons.forEach(reason => {
+          cancelRejectReason += `${num}. ${reason.reason}\n`;
+          picCancelReject += `${num}. ${reason.pic || '-'}\n`;
+          cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+
+          num++;
+        })
+      }
+
       return {
         accountID: item.accountID || '',
         customerName: item.invoice?.cloCustName || '',
@@ -712,7 +917,12 @@ exports.exports = async (req, res) => {
         emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : '',
         status: getBillingStatus(item),
         excelSummaryInvoice: item.excelSummaryInvoice ? `${HOST}/uploads/${item.excelSummaryInvoice}` : '',
-        rejectionReason: item.rejectionReason || '',
+        rejectionReason,
+        picReject,
+        rejectionDates,
+        cancelRejectReason,
+        picCancelReject,
+        cancelRejectDates,
       };
     } catch (error) {
       console.error('Error processing billing item:', item._id, error);
@@ -728,6 +938,11 @@ exports.exports = async (req, res) => {
         status: 'Error',
         excelSummaryInvoice: '',
         rejectionReason: 'Error processing this row',
+        picReject: 'Error',
+        rejectionDates: 'Error',
+        cancelRejectReason: 'Error',
+        picCancelReject: 'Error',
+        cancelRejectDates: 'Error',
       };
     }
   });
@@ -1018,8 +1233,13 @@ exports.exportsCustomerBilling = async (req, res) => {
     { header: 'EMAIL SEND DATE', key: 'emailSendDate', width: 20 },
     { header: 'STATUS', key: 'status', width: 20 },
     { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
+    { header: 'PIC REJECT', key: 'picReject', width: 30 },
+    { header: 'REJECT DATE', key: 'rejectionDates', width: 30 },
+    { header: 'REASON CANCEL REJECT', key: 'cancelRejectReason', width:  100},
+    { header: 'PIC CANCEL REJECT', key: 'picCancelReject', width: 30 },
+    { header: 'CANCEL REJECT DATE', key: 'cancelRejectDates', width: 30 },
   ];
-
+``
   // Style header row
   worksheet.getRow(1).font = { bold: true };
   worksheet.getRow(1).fill = {
@@ -1030,6 +1250,36 @@ exports.exportsCustomerBilling = async (req, res) => {
 
   const flatData = billings.map((item) => {
     try {
+      let rejectionReason = '';
+      let picReject = '';
+      let rejectionDates = '';
+
+      if (item.rejectionReason.length > 0) {
+        let num = 1;
+        item.rejectionReason.forEach(reason => {
+          rejectionReason += `${num}. ${reason.reason}\n`;
+          picReject += `${num}. ${reason.pic || '-'}\n`;
+          rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+
+          num++;
+        })
+      }
+
+      let cancelRejectReason = '';
+      let picCancelReject = '';
+      let cancelRejectDates = '';
+
+      if (item.cancelRejectReasons?.length > 0) {
+        let num = 1;
+        item.cancelRejectReasons.forEach(reason => {
+          cancelRejectReason += `${num}. ${reason.reason}\n`;
+          picCancelReject += `${num}. ${reason.pic || '-'}\n`;
+          cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+
+          num++;
+        })
+      }
+
       return {
         accountID: item.accountID || '',
         cloCustName: item.invoice?.cloCustName || '',
@@ -1040,7 +1290,12 @@ exports.exportsCustomerBilling = async (req, res) => {
         downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
         emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : "-",
         status: getBillingStatus(item),
-        rejectionReason: item.rejectionReason || '',
+        rejectionReason,
+        picReject,
+        rejectionDates,
+        cancelRejectReason,
+        picCancelReject,
+        cancelRejectDates,
       };
     } catch (error) {
       console.error('Error processing billing item:', item._id, error);
@@ -1055,6 +1310,11 @@ exports.exportsCustomerBilling = async (req, res) => {
         emailSendDate: '-',
         status: 'Error',
         rejectionReason: 'Error processing this row',
+        picReject: 'Error',
+        rejectionDates: 'Error',
+        cancelRejectReason: 'Error',
+        picCancelReject: 'Error',
+        cancelRejectDates: 'Error',
       };
     }
   });
