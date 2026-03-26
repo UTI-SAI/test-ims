@@ -880,7 +880,7 @@ exports.exports = async (req, res) => {
       let picReject = '';
       let rejectionDates = '';
 
-      if (item.rejectionReason.length > 0) {
+      if (item.rejectionReason?.length > 0) {
         let num = 1;
         item.rejectionReason.forEach(reason => {
           rejectionReason += `${num}. ${reason.reason}\n`;
@@ -1254,7 +1254,7 @@ exports.exportsCustomerBilling = async (req, res) => {
       let picReject = '';
       let rejectionDates = '';
 
-      if (item.rejectionReason.length > 0) {
+      if (item.rejectionReason?.length > 0) {
         let num = 1;
         item.rejectionReason.forEach(reason => {
           rejectionReason += `${num}. ${reason.reason}\n`;
