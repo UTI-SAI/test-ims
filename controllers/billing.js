@@ -879,10 +879,11 @@ exports.exports = async (req, res) => {
        let rejectionReason = '';
       let picReject = '';
       let rejectionDates = '';
+      const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
 
-      if (item.rejectionReason?.length > 0) {
+      if (rejectionEntries.length > 0) {
         let num = 1;
-        item.rejectionReason.forEach(reason => {
+        rejectionEntries.forEach(reason => {
           rejectionReason += `${num}. ${reason.reason}\n`;
           picReject += `${num}. ${reason.pic || '-'}\n`;
           rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
@@ -894,10 +895,13 @@ exports.exports = async (req, res) => {
       let cancelRejectReason = '';
       let picCancelReject = '';
       let cancelRejectDates = '';
+      const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
+        ? item.cancelRejectReasons
+        : [];
 
-      if (item.cancelRejectReasons?.length > 0) {
+      if (cancelRejectEntries.length > 0) {
         let num = 1;
-        item.cancelRejectReasons.forEach(reason => {
+        cancelRejectEntries.forEach(reason => {
           cancelRejectReason += `${num}. ${reason.reason}\n`;
           picCancelReject += `${num}. ${reason.pic || '-'}\n`;
           cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
@@ -1253,10 +1257,11 @@ exports.exportsCustomerBilling = async (req, res) => {
       let rejectionReason = '';
       let picReject = '';
       let rejectionDates = '';
+      const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
 
-      if (item.rejectionReason?.length > 0) {
+      if (rejectionEntries.length > 0) {
         let num = 1;
-        item.rejectionReason.forEach(reason => {
+        rejectionEntries.forEach(reason => {
           rejectionReason += `${num}. ${reason.reason}\n`;
           picReject += `${num}. ${reason.pic || '-'}\n`;
           rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
@@ -1268,10 +1273,13 @@ exports.exportsCustomerBilling = async (req, res) => {
       let cancelRejectReason = '';
       let picCancelReject = '';
       let cancelRejectDates = '';
+      const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
+        ? item.cancelRejectReasons
+        : [];
 
-      if (item.cancelRejectReasons?.length > 0) {
+      if (cancelRejectEntries.length > 0) {
         let num = 1;
-        item.cancelRejectReasons.forEach(reason => {
+        cancelRejectEntries.forEach(reason => {
           cancelRejectReason += `${num}. ${reason.reason}\n`;
           picCancelReject += `${num}. ${reason.pic || '-'}\n`;
           cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
