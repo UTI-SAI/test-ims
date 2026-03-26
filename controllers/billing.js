@@ -802,8 +802,18 @@ exports.exports = async (req, res) => {
     }
 
     if (reportType === "CURRENT") {
+      const page = Math.max(parseInt(searchParam.page, 10) || 1, 1);
+      const parsedPageSize = parseInt(searchParam.pageSize, 10);
+      const pageSize = Number.isNaN(parsedPageSize)
+        ? 10
+        : Math.min(Math.max(parsedPageSize, 1), 500);
+      const skip = (page - 1) * pageSize;
+
+      delete searchParam.page;
+      delete searchParam.pageSize;
+
       const query = exports.buildBillingSearchQuery(searchParam);
-      billings = await collection.find(query).toArray();
+      billings = await collection.find(query).skip(skip).limit(pageSize).toArray();
     } else if (reportType === "MULTIPLE_ROW") {
       if (!selectedIds) {
         return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
@@ -1158,6 +1168,16 @@ exports.exportsCustomerBilling = async (req, res) => {
     }
 
     if (reportType === "CURRENT") {
+      const page = Math.max(parseInt(searchParam.page, 10) || 1, 1);
+      const parsedPageSize = parseInt(searchParam.pageSize, 10);
+      const pageSize = Number.isNaN(parsedPageSize)
+        ? 10
+        : Math.min(Math.max(parsedPageSize, 1), 500);
+      const skip = (page - 1) * pageSize;
+
+      delete searchParam.page;
+      delete searchParam.pageSize;
+
       const query = exports.buildBillingSearchQuery(searchParam);
       
       // Add account filter for non-superadmin users
@@ -1166,7 +1186,7 @@ exports.exportsCustomerBilling = async (req, res) => {
       }
       
       query["billingStatus"] = { $ne: "CANCELLED" };
-      billings = await collection.find(query).toArray();
+      billings = await collection.find(query).skip(skip).limit(pageSize).toArray();
     } else if (reportType === "MULTIPLE_ROW") {
       if (!selectedIds) {
         return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
