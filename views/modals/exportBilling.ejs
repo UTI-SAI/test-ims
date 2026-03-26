@@ -270,7 +270,33 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    let errorMessage = `HTTP error! status: ${response.status}`;
+                    let totalRows = null;
+                    let limit = null;
+                    
+                    try {
+                        const errorData = await response.json();
+                        errorMessage = errorData.error || errorData.message || errorMessage;
+                        totalRows = typeof errorData.totalRows === 'number' ? errorData.totalRows : null;
+                        limit = typeof errorData.limit === 'number' ? errorData.limit : null;
+                    } catch (parseError) {
+                        console.warn('Failed to parse export error response:', parseError);
+                    }
+
+                    const detailLines = [];
+                    if (totalRows !== null) detailLines.push(`Total data: ${totalRows}`);
+                    if (limit !== null) detailLines.push(`Limit export ENTIRE: ${limit}`);
+
+                    Swal.fire({
+                        icon: "error",
+                        title: "Export Failed",
+                        html: detailLines.length > 0
+                            ? `<p>${errorMessage}</p><p>${detailLines.join('<br>')}</p>`
+                            : `<p>${errorMessage}</p>`,
+                        confirmButtonText: "OK",
+                    });
+
+                    return;
                 }
                 
                 // Get filename from Content-Disposition header
@@ -332,7 +358,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 Swal.fire({
                     icon: "error",
                     title: "Export Failed",
-                    text: "Failed to export data. Please try again.",
+                    text: error.message || "Failed to export data. Please try again.",
                     confirmButtonText: "OK",
                 });
             } finally {

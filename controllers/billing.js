@@ -785,6 +785,7 @@ exports.exports = async (req, res) => {
     });
 
     let billings = [];
+    const ENTIRE_EXPORT_LIMIT = 5000;
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
@@ -846,7 +847,17 @@ exports.exports = async (req, res) => {
       
       billings = await collection.find({ _id: { $in: validIds } }).toArray();
     } else {
-      billings = await collection.find().toArray();
+      const totalRows = await collection.estimatedDocumentCount();
+      if (totalRows > ENTIRE_EXPORT_LIMIT) {
+        return res.status(400).json({
+          error: `ENTIRE export is limited to ${ENTIRE_EXPORT_LIMIT} rows`,
+          totalRows,
+          limit: ENTIRE_EXPORT_LIMIT,
+          suggestion: "Please refine your filter or use CURRENT/MULTIPLE_ROW export",
+        });
+      }
+
+      billings = await collection.find().limit(ENTIRE_EXPORT_LIMIT).toArray();
     }
 
     const epoch = new Date().getTime().toString();
@@ -1151,6 +1162,7 @@ exports.exportsCustomerBilling = async (req, res) => {
     const clonedUser = JSON.parse(JSON.stringify(req.user));
     
     let billings = [];
+    const ENTIRE_EXPORT_LIMIT = 5000;
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
@@ -1234,8 +1246,18 @@ exports.exportsCustomerBilling = async (req, res) => {
       if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
         filter["accountID"] = { $in: clonedUser.accountID };
       }
+
+      const totalRows = await collection.countDocuments(filter);
+      if (totalRows > ENTIRE_EXPORT_LIMIT) {
+        return res.status(400).json({
+          error: `ENTIRE export is limited to ${ENTIRE_EXPORT_LIMIT} rows`,
+          totalRows,
+          limit: ENTIRE_EXPORT_LIMIT,
+          suggestion: "Please refine your filter or use CURRENT/MULTIPLE_ROW export",
+        });
+      }
       
-      billings = await collection.find(filter).toArray();
+      billings = await collection.find(filter).limit(ENTIRE_EXPORT_LIMIT).toArray();
     }
 
     const epoch = new Date().getTime().toString();
