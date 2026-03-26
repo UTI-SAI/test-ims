@@ -108,7 +108,8 @@ exports.sendInvoiceEmail = async (req, res) => {
         `
       }
     }
-    const emailFooter = generateEmailFooter(category);
+    const normalizedCategory = typeof category === 'string' ? category.trim() : '';
+    const emailFooter = normalizedCategory ? generateEmailFooter(normalizedCategory) : '';
 
     console.info(`[${requestId}] Fetching RPA logs after lookup...`);
     let logsResult = await rpa
