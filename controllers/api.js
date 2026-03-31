@@ -96,8 +96,8 @@ exports.sendInvoiceEmail = async (req, res) => {
           <h2>1. Login Access</h2>
           <p>Please use the following credentials to log in:</p>
           <p>
-            <b>User ID</b>: Your registered email address><br/>
-            <b>Password</b>: Your registered password><br/>
+            <b>User ID</b>: Your registered email address in CKB<br/>
+            <b>Password</b>: Your registered email address in CKB<br/>
           </p>
           <p>
             <b>Note</b>: You will be required to change your password upon your first login.
