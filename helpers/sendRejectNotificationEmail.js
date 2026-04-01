@@ -112,10 +112,16 @@ const sendRejectNotificationEmail = async (db, invoiceData, options) => {
         }
 
         const toEmailList = customToEmails || toEmails || [];
-        const ccEmailList = [
-          ...toEmails,
+        let ccEmailList = [
           ...ccEmails
         ]
+
+        if (type === 'CANCEL_REJECT') {
+          ccEmailList = [
+            ...toEmails,
+            ...ccEmailList
+          ]
+        }
 
         console.info("Email recipients prepared:", {
           to: toEmailList,
