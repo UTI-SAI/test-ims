@@ -25,8 +25,9 @@ const generateRejectInvoiceEmail = (data) => {
                 const itemNumber = index + 1;
                 invoiceListHtml += `
           <div class="invoice-item">
-            ${itemNumber}. <span class="invoice-number">${invoice.invoiceNumber}</span>, 
-            <span class="rejected-text">Rejected</span>. 
+            ${itemNumber}. <span class="invoice-number">Invoice Number: ${invoice.invoiceNumber}</span>,
+            <span class="invoice-number">CL Number: ${invoice.clNumber}</span>, 
+            <span class="rejected-text">${ data.type === 'REJECT' ? 'Rejected' : 'Cancel Rejected' }</span>. 
             <span class="reason">Reason : ${invoice.reason}</span>
           </div>
         `;
@@ -35,6 +36,7 @@ const generateRejectInvoiceEmail = (data) => {
 
         // Replace invoice list placeholder
         htmlContent = htmlContent.replace('{INVOICE_LIST}', invoiceListHtml);
+        htmlContent = htmlContent.replace('{INFO}', data.info || '');
 
         return htmlContent;
     } catch (error) {
