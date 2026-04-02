@@ -343,7 +343,9 @@
                             <% if (bill.isRejected && bill.billingStatus !== 'CANCELLED') { %>
                             <button type="button" class="btn btn-md btn-warning" data-bs-toggle="modal"
                                 data-bs-target="#modal-cancel-reject"
+                                onclick="fillCancelRejectModal(this)"
                                 @click="fillBillingData(JSON.parse($el.getAttribute('data-item')))"
+                                data-id="<%= bill._id %>"
                                 :data-item="'<%= JSON.stringify(bill) %>'"
                                 >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh-alert"

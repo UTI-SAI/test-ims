@@ -62,6 +62,15 @@
             }));
         });
 
+        window.fillCancelRejectModal = (button) => {
+            const invoiceId = button.getAttribute('data-id') || '';
+            const hiddenIdInput = document.getElementById('cancelRejectInvoiceId');
+
+            if (hiddenIdInput) {
+                hiddenIdInput.value = invoiceId;
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
 
