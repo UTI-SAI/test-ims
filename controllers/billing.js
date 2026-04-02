@@ -479,6 +479,7 @@ exports.rejectInvoice = async (req, res) => {
   } catch (error) {
     console.error("❌ REJECT INVOICE ERROR:", error);
     console.error("Error stack:", error.stack);
+    console.error("Request body:", JSON.stringify(req.body, null, 2));
     res.status(500).send("Server error");
   }
 };
@@ -566,6 +567,7 @@ exports.cancelReject = async (req, res) => {
   } catch (error) {
     console.error("❌ CANCEL REJECT ERROR:", error);
     console.error("Error stack:", error.stack);
+    console.error("Request body:", JSON.stringify(req.body, null, 2));
     res.status(500).send("Server error");
   }
 };
@@ -669,6 +671,7 @@ exports.rejectInvoiceByAdmin = async (req, res) => {
   } catch (error) {
     console.error("❌ ADMIN REJECT INVOICE ERROR:", error);
     console.error("Error stack:", error.stack);
+    console.error("Request body:", JSON.stringify(req.body, null, 2));
     res.status(500).send("Server error");
   }
 };
