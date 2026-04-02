@@ -26,7 +26,7 @@ const generateRejectInvoiceEmail = (data) => {
                 invoiceListHtml += `
           <div class="invoice-item">
             ${itemNumber}. <span class="invoice-number">Invoice Number: ${invoice.invoiceNumber}</span>,
-            <span class="invoice-number">CL Number: ${invoice.clNumber}</span>, 
+            <span class="invoice-number">Account ID: ${invoice.accountID}</span>, 
             <span class="rejected-text">${ data.type === 'REJECT' ? 'Rejected' : 'Cancel Rejected' }</span>. 
             <span class="reason">Reason : ${invoice.reason}</span>
           </div>

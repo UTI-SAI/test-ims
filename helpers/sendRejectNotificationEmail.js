@@ -38,7 +38,7 @@ const sendRejectNotificationEmail = async (db, invoiceData, options) => {
           invoices: [
             {
               invoiceNumber: invoiceData.invoice?.invoiceno || invoiceData.invoiceno || 'Unknown',
-              clNumber: invoiceData.invoice?.clnumber || invoiceData.clnumber || 'Unknown',
+              accountID: invoiceData.accountID || invoiceData.invoice?.customer || 'Unknown',
               reason: reason || "No reason provided"
             }
           ]
