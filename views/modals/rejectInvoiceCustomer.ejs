@@ -7,7 +7,7 @@
             </div>
             <form action="/billing/customer-reject-invoice" method="post">
                 <div class="modal-body">
-                    <input type="hidden" name="id" x-model="invoice._id">
+                    <input type="hidden" name="id" :value="invoice._id">
                     <div class="row">
                         <div class="col-lg-12">
                             <div class="mb-3">

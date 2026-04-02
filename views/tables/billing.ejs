@@ -298,7 +298,8 @@
                         <td class="flex d-flex justify-content-between" style="gap: 5px;">
                             <button type="button" class="btn btn-md" data-bs-toggle="modal"
                                 data-bs-target="#modal-manual-billing"
-                                @click="fillBillingData(<%= JSON.stringify(bill) %>)">
+                                @click="fillBillingData(JSON.parse($el.getAttribute('data-item')))"
+                                :data-item="'<%= JSON.stringify(bill) %>'">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-file-pencil"
                                     width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
                                     fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -313,7 +314,8 @@
                             </button>
                             <button type="button" class="btn btn-md btn-success" data-bs-toggle="modal"
                                 data-bs-target="#modal-upload-billing"
-                                @click="fillBillingData(<%= JSON.stringify(bill) %>)">
+                                @click="fillBillingData(JSON.parse($el.getAttribute('data-item')))"
+                                :data-item="'<%= JSON.stringify(bill) %>'">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-cloud-upload"
                                     width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
                                     fill="none" stroke-linecap="round" stroke-linejoin="round">
@@ -326,8 +328,9 @@
                                 Upload
                             </button>
                             <!-- @click="resendEmail(<%= JSON.stringify(bill) %>)" -->
-                            <button @click="fillBillingData(<%= JSON.stringify(bill) %>)" data-bs-toggle="modal"
-                                data-bs-target="#modal-resend-billing" type="button" class="btn btn-info btn-md">
+                            <button @click="fillBillingData(JSON.parse($el.getAttribute('data-item')))" data-bs-toggle="modal"
+                                data-bs-target="#modal-resend-billing" type="button" class="btn btn-info btn-md"
+                                :data-item="'<%= JSON.stringify(bill) %>'">
                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"
                                     fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                     stroke-linejoin="round" class="icon icon-tabler icons-tabler-outline icon-tabler-send">
@@ -339,7 +342,10 @@
                             </button>
                             <% if (bill.isRejected && bill.billingStatus !== 'CANCELLED') { %>
                             <button type="button" class="btn btn-md btn-warning" data-bs-toggle="modal"
-                                data-bs-target="#modal-cancel-reject" @click="fillBillingData(<%= JSON.stringify(bill) %>)">
+                                data-bs-target="#modal-cancel-reject"
+                                @click="fillBillingData(JSON.parse($el.getAttribute('data-item')))"
+                                :data-item="'<%= JSON.stringify(bill) %>'"
+                                >
                                 <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-refresh-alert"
                                     width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"
                                     fill="none" stroke-linecap="round" stroke-linejoin="round">
