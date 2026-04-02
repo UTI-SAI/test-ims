@@ -15,6 +15,15 @@ function logWithTimestamp(message) {
 
 const lookUpRPA = async (originalCLNumber, originalInvoiceNo) => {
   try {
+    const invoiceNoList = Array.isArray(originalInvoiceNo)
+      ? originalInvoiceNo.map((it) => String(it).trim()).filter(Boolean)
+      : typeof originalInvoiceNo === "string"
+      ? originalInvoiceNo
+          .split(",")
+          .map((it) => it.trim())
+          .filter(Boolean)
+      : [];
+
     // Connect to SQL Server database
     const pool = await sql.connect({
       server: "10.144.230.5",
@@ -62,7 +71,11 @@ const lookUpRPA = async (originalCLNumber, originalInvoiceNo) => {
     logWithTimestamp(`Finished querying CL -> ${clNumber}`);
     logWithTimestamp(`Rows affected: ${rowsAffected}`);
 
-    if (rowsAffected === 0) {
+    const affectedRows = Array.isArray(rowsAffected)
+      ? rowsAffected.reduce((sum, value) => sum + (Number(value) || 0), 0)
+      : Number(rowsAffected) || 0;
+
+    if (!recordset || recordset.length === 0 || affectedRows === 0) {
       logWithTimestamp("No record found, skipping...");
       return null;
     }
@@ -73,15 +86,16 @@ const lookUpRPA = async (originalCLNumber, originalInvoiceNo) => {
       let invoiceRecord = { ...item };
 
       if (
-        !originalInvoiceNo.includes(item.invoiceno2) &&
-        !originalInvoiceNo.includes(item.invoice_no)
+        invoiceNoList.length > 0 &&
+        !invoiceNoList.includes(item.invoiceno2) &&
+        !invoiceNoList.includes(item.invoice_no)
       ) {
         continue;
       }
 
-      const actualInvoiceNo = originalInvoiceNo.find(
+      const actualInvoiceNo = invoiceNoList.find(
         (it) => it === item.invoiceno2 || it === item.invoice_no
-      );
+      ) || item.invoiceno2 || item.invoice_no;
 
       invoiceRecord.invoiceno = actualInvoiceNo;
       invoiceRecord.invoice_no = actualInvoiceNo;
