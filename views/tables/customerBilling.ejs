@@ -302,7 +302,10 @@
                             <% } else if (!bill.isRejected && bill.billingStatus !== "PAID" && bill.billingStatus !== 'CANCELLED') { %>
                                 <button type="button" class="btn btn-danger btn-xs" data-bs-toggle="modal"
                                     data-bs-target="#modal-reject-invoice-customer"
+                                    onclick="fillCustomerRejectInvoiceModal(this)"
                                     @click="fillInvoiceData(JSON.parse($el.getAttribute('data-item')))"
+                                    data-id="<%= bill._id %>"
+                                    data-invoiceno="<%= bill.invoice?.invoiceno || bill.invoiceno || '' %>"
                                     :data-item="'<%= JSON.stringify(bill) %>'">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="icon icon-tabler icon-tabler-ban"
                                         width="24" height="24" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor"

@@ -17,6 +17,22 @@
             }));
         });
 
+        window.fillCustomerRejectInvoiceModal = (button) => {
+            const invoiceId = button.getAttribute('data-id') || '';
+            const invoiceNo = button.getAttribute('data-invoiceno') || '';
+
+            const hiddenIdInput = document.getElementById('customerRejectInvoiceId');
+            const modalTitle = document.getElementById('customerRejectInvoiceTitle');
+
+            if (hiddenIdInput) {
+                hiddenIdInput.value = invoiceId;
+            }
+
+            if (modalTitle) {
+                modalTitle.textContent = `Reject Invoice ${invoiceNo}`;
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             const urlParams = new URLSearchParams(window.location.search);
 
