@@ -409,6 +409,11 @@ exports.rejectInvoice = async (req, res) => {
     const { rejectionReason, id } = req.body;
     console.info("Request data received:", { rejectionReason, id });
 
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      console.error("❌ Invalid or missing id:", id);
+      return res.status(400).send("Invalid or missing invoice id");
+    }
+
     const db = mongoose.connection;
     const collection = db.collection("billing");
     console.info("Database connection established");
@@ -483,6 +488,11 @@ exports.cancelReject = async (req, res) => {
   try {
     const { reason, id } = req.body;
     console.info("Request data received:", { reason, id });
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      console.error("❌ Invalid or missing id:", id);
+      return res.status(400).send("Invalid or missing invoice id");
+    }
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
@@ -565,6 +575,11 @@ exports.rejectInvoiceByAdmin = async (req, res) => {
   try {
     const { rejectionReason, id } = req.body;
     console.info("Request data received:", { rejectionReason, id });
+
+    if (!id || !mongoose.Types.ObjectId.isValid(id)) {
+      console.error("❌ Invalid or missing id:", id);
+      return res.status(400).send("Invalid or missing invoice id");
+    }
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
