@@ -27,10 +27,12 @@
                 id: null,
                 queryString: '',
                 fillBillingData(item) {
-                    this.billing = item;
+                    const rawId = item._id;
+                    const idStr = typeof rawId === 'string' ? rawId : (rawId?.$oid || String(rawId));
+                    this.billing = { ...item, _id: idStr };
                     clNumber = item.invoice.clnumber;
                     this.clNumber = clNumber;
-                    this.id = item._id.toString();
+                    this.id = idStr;
 
                     try {
                         const urlParams = new URLSearchParams(window.location.search);

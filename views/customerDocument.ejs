@@ -9,8 +9,10 @@
                 invoice: {},
                 fillInvoiceData(item) {
                     console.log('invoice', item)
-                    this.invoice = item;
-                    this.billing = item;
+                    const rawId = item._id;
+                    const idStr = typeof rawId === 'string' ? rawId : (rawId?.$oid || String(rawId));
+                    this.invoice = { ...item, _id: idStr };
+                    this.billing = { ...item, _id: idStr };
                 },
             }));
         });
