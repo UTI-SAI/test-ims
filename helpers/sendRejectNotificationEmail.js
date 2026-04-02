@@ -2,7 +2,7 @@ const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoice
 const sendEmail = require("./sendEmail");
 
 const sendRejectNotificationEmail = async (db, invoiceData, options) => {
-  const { type, info, reason, customToEmails } = options;
+  const { type, info, reason, customToEmails, rejectedBy } = options;
 
   try {
     if (invoiceData) {
@@ -39,7 +39,8 @@ const sendRejectNotificationEmail = async (db, invoiceData, options) => {
             {
               invoiceNumber: invoiceData.invoice?.invoiceno || invoiceData.invoiceno || 'Unknown',
               accountID: invoiceData.accountID || invoiceData.invoice?.customer || 'Unknown',
-              reason: reason || "No reason provided"
+              reason: reason || "No reason provided",
+              rejectedBy: rejectedBy || ""
             }
           ]
         };

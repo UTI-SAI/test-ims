@@ -29,6 +29,7 @@ const generateRejectInvoiceEmail = (data) => {
             <span class="invoice-number">Account ID: ${invoice.accountID}</span>, 
             <span class="rejected-text">${ data.type === 'REJECT' ? 'Rejected' : 'Cancel Rejected' }</span>. 
             <span class="reason">Reason : ${invoice.reason}</span>
+                        ${data.type === 'REJECT' && invoice.rejectedBy ? `<br><span class="rejected-by">rejected by : ${invoice.rejectedBy}</span>` : ''}
           </div>
         `;
             });

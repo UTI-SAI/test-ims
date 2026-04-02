@@ -470,7 +470,8 @@ exports.rejectInvoice = async (req, res) => {
     await sendRejectNotificationEmail(db, invoiceData, {
       type: "REJECT",
       info: "direjected by customer",
-      reason: rejectionReason
+      reason: rejectionReason,
+      rejectedBy: req.user?.email || ""
     });
 
     console.info("=== REJECT INVOICE PROCESS COMPLETED ===");
@@ -657,7 +658,8 @@ exports.rejectInvoiceByAdmin = async (req, res) => {
       await sendRejectNotificationEmail(db, invoiceData, {
         type: "REJECT",
         info: "direjected by admin",
-        reason: rejectionReason
+        reason: rejectionReason,
+        rejectedBy: req.user?.email || ""
       });
     } catch (emailError) {
       console.error("❌ Error sending reject notification email:", emailError);
