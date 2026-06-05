@@ -696,16 +696,17 @@ exports.exports = async (req, res) => {
     const db = mongoose.connection;
     const collection = db.collection("billing");
 
-    // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
-    if (reportType === "MULTIPLE_INVOICE") {
+    // Handle MULTIPLE_INVOICE variants - download PDFs instead of CSV
+    if (reportType === "MULTIPLE_INVOICE" || reportType === "MULTIPLE_INVOICE_STAMPED") {
       if (!selectedIds) {
-        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE/MULTIPLE_INVOICE_STAMPED" });
       }
 
       const ids = selectedIds.split(",").map((id) => id.trim());
+      const isStamped = reportType === "MULTIPLE_INVOICE_STAMPED";
 
       // Render view for multiple invoice downloads
-      return res.render('downloadMultipleInvoices', { ids });
+      return res.render('downloadMultipleInvoices', { ids, isStamped });
     }
 
     if (reportType === "CURRENT") {
@@ -1073,16 +1074,17 @@ exports.exportsCustomerBilling = async (req, res) => {
     const db = mongoose.connection;
     const collection = db.collection("billing");
 
-    // Handle MULTIPLE_INVOICE - download PDFs instead of CSV
-    if (reportType === "MULTIPLE_INVOICE") {
+    // Handle MULTIPLE_INVOICE variants - download PDFs instead of CSV
+    if (reportType === "MULTIPLE_INVOICE" || reportType === "MULTIPLE_INVOICE_STAMPED") {
       if (!selectedIds) {
-        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE" });
+        return res.status(400).json({ error: "selectedIds is required for MULTIPLE_INVOICE/MULTIPLE_INVOICE_STAMPED" });
       }
 
       const ids = selectedIds.split(",").map((id) => id.trim());
+      const isStamped = reportType === "MULTIPLE_INVOICE_STAMPED";
 
       // Render view for multiple invoice downloads
-      return res.render('downloadMultipleInvoices', { ids });
+      return res.render('downloadMultipleInvoices', { ids, isStamped });
     }
 
     if (reportType === "CURRENT") {
@@ -1182,6 +1184,7 @@ exports.exportsCustomerBilling = async (req, res) => {
     { header: 'INVOICE NO', key: 'invoiceNo', width: 15 },
     { header: 'INVOICE DATE', key: 'invoiceDate', width: 12 },
     { header: 'DOWNLOAD INVOICE', key: 'downloadInvoice', width: 50 },
+    { header: 'DOWNLOAD  INVOICE STAMPED', key: 'downloadInvoiceStamped', width: 50 },
     { header: 'EMAIL SEND DATE', key: 'emailSendDate', width: 20 },
     { header: 'STATUS', key: 'status', width: 20 },
     { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
@@ -1191,7 +1194,7 @@ exports.exportsCustomerBilling = async (req, res) => {
     { header: 'PIC CANCEL REJECT', key: 'picCancelReject', width: 30 },
     { header: 'CANCEL REJECT DATE', key: 'cancelRejectDates', width: 30 },
   ];
-``
+
   // Style header row
   worksheet.getRow(1).font = { bold: true };
   worksheet.getRow(1).fill = {
@@ -1244,6 +1247,7 @@ exports.exportsCustomerBilling = async (req, res) => {
         invoiceNo: item.invoice?.invoiceno || '',
         invoiceDate: item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
         downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
+        downloadInvoiceStamped: `${HOST}/api/invoices/download-stamped/${item._id.toString()}`,
         emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : "-",
         status: getBillingStatus(item),
         rejectionReason,
@@ -1253,6 +1257,7 @@ exports.exportsCustomerBilling = async (req, res) => {
         picCancelReject,
         cancelRejectDates,
       };
+      
     } catch (error) {
       console.error('Error processing billing item:', item._id, error);
       return {

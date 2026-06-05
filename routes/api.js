@@ -142,6 +142,12 @@ router.get(
   apiController.downloadInvoice
 );
 
+router.get(
+  "/invoices/download-stamped/:id",
+  ensureRoles(ROLES.SUPER_ADMIN, ROLES.USER),
+  apiController.downloadInvoiceStamped
+);
+
 router.post(
   "/invoices/resend-email",
   ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),

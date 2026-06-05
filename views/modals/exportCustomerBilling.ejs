@@ -16,8 +16,8 @@
                     <div class="form-selectgroup-boxes row mb-3">
                         <div class="col-lg-6">
                             <label class="form-selectgroup-item">
-                                <input type="radio" name="reportType" value="CURRENT"
-                                    class="form-selectgroup-input" checked>
+                                <input type="radio" name="reportType" value="CURRENT" class="form-selectgroup-input"
+                                    checked>
                                 <span class="form-selectgroup-label d-flex align-items-center p-3">
                                     <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
@@ -29,8 +29,7 @@
                         </div>
                         <div class="col-lg-6">
                             <label class="form-selectgroup-item">
-                                <input type="radio" name="reportType" value="ENTIRE"
-                                    class="form-selectgroup-input">
+                                <input type="radio" name="reportType" value="ENTIRE" class="form-selectgroup-input">
                                 <span class="form-selectgroup-label d-flex align-items-center p-3">
                                     <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
@@ -51,7 +50,7 @@
                                     <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
                                         <span class="form-selectgroup-title strong mb-1">Multiple Selection</span>
-                                        <span class="d-block text-muted">Only Invoice</span>
+                                        <span class="d-block text-muted">Invoice</span>
                                     </span>
                                 </span>
                             </label>
@@ -59,13 +58,27 @@
 
                         <div class="col-lg-6">
                             <label class="form-selectgroup-item">
-                                <input type="radio" name="reportType" value="MULTIPLE_ROW"
-                                    id="exportMultipleRow" class="form-selectgroup-input">
+                                <input type="radio" name="reportType" value="MULTIPLE_ROW" id="exportMultipleRow"
+                                    class="form-selectgroup-input">
                                 <span class="form-selectgroup-label d-flex align-items-center p-3">
                                     <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
                                         <span class="form-selectgroup-title strong mb-1">Multiple Selection</span>
                                         <span class="d-block text-muted">Row data</span>
+                                    </span>
+                                </span>
+                            </label>
+                        </div>
+
+                        <div class="col-lg-6 mt-3">
+                            <label class="form-selectgroup-item">
+                                <input type="radio" name="reportType" value="MULTIPLE_INVOICE_STAMPED"
+                                    id="exportMultipleInvoiceStamped" class="form-selectgroup-input">
+                                <span class="form-selectgroup-label d-flex align-items-center p-3">
+                                    <span class="me-3"><span class="form-selectgroup-check"></span></span>
+                                    <span class="form-selectgroup-label-content">
+                                        <span class="form-selectgroup-title strong mb-1">Multiple Selection</span>
+                                        <span class="d-block text-muted">Invoice Stamped</span>
                                     </span>
                                 </span>
                             </label>
@@ -102,6 +115,7 @@
         const selectedIdsInput = document.getElementById("selectedIds");
         const exportMultipleInvoice = document.getElementById("exportMultipleInvoice");
         const exportMultipleRow = document.getElementById("exportMultipleRow");
+        const exportMultipleInvoiceStamped = document.getElementById("exportMultipleInvoiceStamped");
         const selectAll = document.getElementById("select-all");
 
         // Read selected items from localStorage (persistent across pages)
@@ -126,12 +140,15 @@
             const hasSelection = storedItems.length > 0;
             exportMultipleInvoice.disabled = !hasSelection;
             exportMultipleRow.disabled = !hasSelection;
+            exportMultipleInvoiceStamped.disabled = !hasSelection;
 
             // Reset radio if no selection
             if (!hasSelection) {
                 const selectedRadio = document.querySelector("input[name='reportType']:checked");
                 if (selectedRadio &&
-                    (selectedRadio.value === "MULTIPLE_INVOICE" || selectedRadio.value === "MULTIPLE_ROW")) {
+                    (selectedRadio.value === "MULTIPLE_INVOICE" ||
+                        selectedRadio.value === "MULTIPLE_ROW" ||
+                        selectedRadio.value === "MULTIPLE_INVOICE_STAMPED")) {
                     selectedRadio.checked = false;
                 }
             }
@@ -142,7 +159,7 @@
         modal.addEventListener("show.bs.modal", updateExportState);
 
         // Detect user click on disabled export options
-        [exportMultipleInvoice, exportMultipleRow].forEach(el => {
+        [exportMultipleInvoice, exportMultipleRow, exportMultipleInvoiceStamped].forEach(el => {
             el.closest(".form-selectgroup-item").addEventListener("click", (e) => {
                 if (el.disabled) {
                     e.preventDefault();
@@ -190,7 +207,7 @@
                     exportCustomerSubmitBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Processing...';
                     
                     // Special handling for MULTIPLE_INVOICE - open in new tab for PDF downloads
-                    if (reportType === 'MULTIPLE_INVOICE') {
+                    if (reportType === 'MULTIPLE_INVOICE' || reportType === 'MULTIPLE_INVOICE_STAMPED') {
                         // Create form and submit to new tab
                         const form = document.createElement('form');
                         form.method = 'POST';
@@ -240,7 +257,9 @@
                         Swal.fire({
                             icon: "info",
                             title: "Opening Download Page",
-                            text: "PDF invoices will be downloaded in a new tab.",
+                            text: reportType === 'MULTIPLE_INVOICE_STAMPED'
+                                ? "PDF stamped invoices will be downloaded in a new tab."
+                                : "PDF invoices will be downloaded in a new tab.",
                             timer: 2000,
                             showConfirmButton: false
                         });
@@ -380,4 +399,3 @@
         }
     });
 </script>
-```
