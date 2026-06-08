@@ -223,8 +223,11 @@
                                 Not Downloaded Yet
                             <% } %>
                         </td>
-                        <!-- TAMBAHAN: Download Invoice Stamped -->
+                        <!--  TAMBAHAN: Download Invoice Stamped -->
                         <td class="text-center">
+                            <% if (new Date(bill.createdOn) < new Date('2026-06-08T00:00:00.000Z')) { %>
+                                -
+                            <% } else { %>
                             <a target="_blank" href="/api/invoices/download-stamped/<%= bill._id %>"
                                 style="width: 30px; height: 30px;" class="btn btn-xs btn-white">
                                 <div class="icon-wrapper">
@@ -239,6 +242,7 @@
                                     </svg>
                                 </div>
                             </a>
+                            <% } %>
                         </td>
                         <td class="text-muted text-center">
                             <code><%= moment(bill.emailSendDate).format("MM/DD/YYYY HH:mm") %></code>

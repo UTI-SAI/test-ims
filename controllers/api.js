@@ -630,7 +630,6 @@ exports.downloadInvoice = async (req, res) => {
 
     // Tentukan path file PDF yang valid (coba "Result" dulu, lalu "Archive - Paid Invoice")
     const candidates = [
-      // Prodaction
       `\\\\CKB-A0000036932\\Invoice Automation\\7. Result\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
       `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\${monthDirPath}\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
     ];
@@ -720,11 +719,12 @@ exports.downloadInvoiceStamped = async (req, res) => {
     }
     
     const candidates = [
-      // Prodaction
       `\\\\CKB-A0000036932\\Invoice Automation\\9. Invoice & Debit Note Stamped\\SC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
       `\\\\CKB-A0000036932\\Invoice Automation\\9. Invoice & Debit Note Stamped\\HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
       `\\\\CKB-A0000036932\\Invoice Automation\\9. Invoice & Debit Note Stamped\\SC & HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
-      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\Invoice & Debit Note Stamped\\${monthDirPath}\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\Invoice & Debit Note Stamped\\SC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\Invoice & Debit Note Stamped\\HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\Invoice & Debit Note Stamped\\SC & HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
     ];
 
     let pdfPath = null;
