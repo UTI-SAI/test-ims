@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Downloading Invoices</title>
+    <title>Downloading <%= isStamped ? 'Stamped Invoices' : 'Invoices' %></title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -63,7 +63,7 @@
 </head>
 <body>
     <div class="container">
-        <h2>Downloading Invoices</h2>
+        <h2>Downloading <%= isStamped ? 'Invoices Stamped' : 'Invoices' %></h2>
         <div class="spinner"></div>
         <div class="progress">
             <span id="current">0</span> / <span id="total"><%= ids.length %></span> files downloaded
@@ -73,6 +73,8 @@
 
     <script>
         const ids = <%- JSON.stringify(ids) %>;
+        const isStamped = <%- JSON.stringify(!!isStamped) %>;
+        const downloadBasePath = isStamped ? '/api/invoices/download-stamped/' : '/api/invoices/download/';
         let current = 0;
         
         // Define functions in global scope
@@ -100,7 +102,7 @@
                 const container = document.querySelector('.container');
                 container.innerHTML = 
                     '<h2 style="color: #27ae60;">✓ Complete!</h2>' +
-                    '<p>All ' + ids.length + ' invoices have been downloaded.</p>' +
+                    '<p>All ' + ids.length + ' ' + (isStamped ? 'stamped invoices' : 'invoices') + ' have been downloaded.</p>' +
                     '<div style="margin-top: 20px;">' +
                     '<button onclick="window.goBack()" class="btn-primary">Back to Billing</button>' +
                     '<button onclick="window.closeTab()" class="btn-secondary">Close Tab</button>' +
@@ -110,7 +112,7 @@
             
             const iframe = document.createElement('iframe');
             iframe.style.display = 'none';
-            iframe.src = '/api/invoices/download/' + ids[current] + '?download=true';
+            iframe.src = downloadBasePath + ids[current] + '?download=true';
             document.body.appendChild(iframe);
             
             current++;

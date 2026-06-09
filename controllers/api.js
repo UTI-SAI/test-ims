@@ -673,6 +673,95 @@ exports.downloadInvoice = async (req, res) => {
   }
 };
 
+exports.downloadInvoiceStamped = async (req, res) => {
+  const { id } = req.params;
+  const { download } = req.query;
+  try {
+    const db = mongoose.connection;
+    const collection = db.collection('billing');
+    const billing = await collection.findOne({ _id: new ObjectId(id) });
+    if (!billing) {
+      return res.status(404).json({ message: 'Billing not found.' });
+    }
+
+    const logRPACollection = db.collection('logRPA');
+    const logRPA = await logRPACollection.findOne({ _id: billing.logId }).catch(() => null);
+
+    const LogDirCollection = db.collection('logDir');  
+    const logDirDoc = await LogDirCollection.findOne({ clNumber: billing.clnumber }).catch(() => null);
+    let monthDirPath = '';
+    if (logDirDoc && logDirDoc.directory) {
+      monthDirPath = logDirDoc.directory;
+    } else {
+      try {
+        const raw = await readFile('\\\\ckb-a0000036932\\Invoice Automation\\logDir.json', 'utf8');
+        const list = JSON.parse(raw);
+        monthDirPath = list.find(it => it.clNumber === billing.clnumber)?.directory || '';
+      } catch (e) {
+        console.warn('[downloadInvoiceStamped] fallback logDir.json error:', e?.message);
+      }
+    }
+
+    const user = JSON.parse(JSON.stringify(req.user || {}));
+    const history = Array.isArray(billing.customerDownloadHistory)
+      ? billing.customerDownloadHistory
+      : [];
+    if (!history.find(h => h.email === (user.email || ''))) {
+      history.push({
+        email: user.email || '',
+        date: new Date().toISOString(),
+        name: user.name || '',
+      });
+      await collection.updateOne(
+        { _id: new ObjectId(id) },
+        { $set: { customerDownloadHistory: history } }
+      );
+    }
+    
+    const candidates = [
+      `\\\\CKB-A0000036932\\Invoice Automation\\9. Invoice & Debit Note Stamped\\SC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Invoice Automation\\9. Invoice & Debit Note Stamped\\HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Invoice Automation\\9. Invoice & Debit Note Stamped\\SC & HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\Invoice & Debit Note Stamped\\SC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\Invoice & Debit Note Stamped\\HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+      `\\\\CKB-A0000036932\\Billing RPA - Invoice Archive\\Invoice & Debit Note Stamped\\SC & HC\\${billing.clnumber}\\${billing.invoiceno}.pdf`,
+    ];
+
+    let pdfPath = null;
+    for (const p of candidates) {
+      const normalized = path.join(p);
+      if (fs.existsSync(normalized)) {
+        pdfPath = normalized;
+        break;
+      }
+    }
+
+    if (!pdfPath) {
+      return res.json({
+        message: 'Stamped invoice file not exist, please check again later',
+      });
+    }
+
+    res.set({
+      'Cache-Control': 'no-store, no-cache, must-revalidate, private',
+      'Pragma': 'no-cache',
+      'Expires': '0',
+    });
+    res.contentType('application/pdf');
+
+    if (download === 'true') {
+      res.setHeader('Content-Disposition', `attachment; filename="${billing.invoiceno}_stamped.pdf"`);
+    } else {
+      res.setHeader('Content-Disposition', `inline; filename="${billing.invoiceno}_stamped.pdf"`);
+    }
+
+    return fs.createReadStream(pdfPath).pipe(res);
+  } catch (e) {
+    console.error('error ', e);
+    return res.status(404).send('404 Not Found');
+  }
+};
+
 exports.createUser = async (req, res) => {
   try {
     const { email, password, name, contact, accountID } = req.body;
@@ -781,17 +870,17 @@ exports.getAllBillingIds = async (req, res) => {
     // Import buildBillingSearchQuery from billing controller
     const billingController = require('./billing');
     const query = billingController.buildBillingSearchQuery(req.query);
-    
+
     console.log('getAllBillingIds query:', JSON.stringify(query, null, 2));
-    
+
     // Fetch only _id field to minimize data transfer
     const billings = await collection.find(query, { projection: { _id: 1 } }).toArray();
-    
+
     const ids = billings.map(item => item._id.toString());
 
-    res.json({ 
+    res.json({
       ids,
-      count: ids.length 
+      count: ids.length
     });
   } catch (error) {
     console.error('Error fetching all billing IDs:', error);
@@ -825,23 +914,23 @@ exports.getAllCustomerBillingIds = async (req, res) => {
     // For USER role, validate that they can only search their own accountIDs
     if (accountID) {
       const accountIDArray = accountID.split(",").map((item) => item.trim());
-      
+
       // If USER role, intersect search accountIDs with user's assigned accountIDs
       if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
         // Filter to only allow accountIDs that user has access to
-        const allowedAccountIDs = accountIDArray.filter(searchId => 
-          clonedUser.accountID.some(userAccountId => 
+        const allowedAccountIDs = accountIDArray.filter(searchId =>
+          clonedUser.accountID.some(userAccountId =>
             userAccountId.toLowerCase() === searchId.toLowerCase()
           )
         );
-        
+
         // If no valid accountIDs found, set impossible condition to return empty result
         if (allowedAccountIDs.length === 0) {
           query["accountID"] = { $in: [] }; // Will return no results
         } else if (allowedAccountIDs.length === 1) {
           query["accountID"] = { $regex: allowedAccountIDs[0], $options: "i" };
         } else {
-          query["accountID"] = { 
+          query["accountID"] = {
             $in: allowedAccountIDs.map(item => new RegExp(item, "i"))
           };
         }
@@ -850,7 +939,7 @@ exports.getAllCustomerBillingIds = async (req, res) => {
         if (accountIDArray.length === 1) {
           query["accountID"] = { $regex: accountIDArray[0], $options: "i" };
         } else {
-          query["accountID"] = { 
+          query["accountID"] = {
             $in: accountIDArray.map(item => new RegExp(item, "i"))
           };
         }
@@ -986,12 +1075,12 @@ exports.getAllCustomerBillingIds = async (req, res) => {
 
     // Fetch only _id field
     const billings = await collection.find(query, { projection: { _id: 1 } }).toArray();
-    
+
     const ids = billings.map(item => item._id.toString());
 
-    res.json({ 
+    res.json({
       ids,
-      count: ids.length 
+      count: ids.length
     });
   } catch (error) {
     console.error('Error fetching all customer billing IDs:', error);
