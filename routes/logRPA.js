@@ -10,7 +10,7 @@ router.post(
   logRPAController.cancelInvoice
 );
 
-router.get(
+router.post(
   "/exports",
   ensureRoles(ROLES.SUPER_ADMIN),
   logRPAController.exports

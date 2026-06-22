@@ -2,7 +2,8 @@ const moment = require("moment-timezone");
 const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
 const { createQueryString } = require("../helpers/createQueryString");
-const createCsvWriter = require("csv-writer").createObjectCsvWriter;
+const fs = require('fs').promises;
+const path = require('path');
 
 const buildLogRPAQuery = (params) => {
   const {
@@ -189,62 +190,106 @@ exports.cancelInvoice = async (req, res) => {
   }
 };
 
-exports.exports = async (req, res) => {
-  const { HOST } = process.env;
-  const { reportType, queryString } = req.query;
-
-  const params = new URLSearchParams(queryString);
-
-  const searchParam = {};
-  params.forEach((value, key) => {
-    searchParam[key] = value;
-  });
-
-  let logRPAs = [];
-
-  const db = mongoose.connection;
-  const collection = db.collection("logRPA");
-
-  if (reportType === "CURRENT") {
-    const query = buildLogRPAQuery(searchParam);
-    logRPAs = await collection.find(query).toArray();
-  } else {
-    logRPAs = await collection.find().toArray();
+// Helper to escape a CSV field value
+const escapeCSVField = (value) => {
+  if (value == null) return '';
+  const str = String(value);
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return '"' + str.replace(/"/g, '""') + '"';
   }
+  return str;
+};
 
-  const epoch = new Date().getTime().toString();
-  const fileName = `./exports/available-document-${reportType.toLowerCase()}-${epoch}.csv`;
+exports.exports = async (req, res) => {
+  try {
+    const { reportType, queryString } = req.body;
 
-  const csvWriter = createCsvWriter({
-    path: fileName,
-    header: [
-      { id: "accountID", title: "ACCOUNT ID" },
-      { id: "customerName", title: "CUSTOMER NAME" },
-      { id: "clNumber", title: "CL NUMBER" },
-      { id: "clDate", title: "CL DATE" },
-      { id: "invoiceNo", title: "INVOICE NO" },
-      { id: "invoiceDate", title: "INVOICE DATE" },
-      { id: "emailSendDate", title: "EMAIL SENDING DATE" },
-      { id: "status", title: "STATUS" },
-      { id: "statusRemark", title: "STATUS REMARK" },
-    ],
-  });
+    const params = new URLSearchParams(queryString);
 
-  const flatData = logRPAs.map((item) => ({
-    accountID: item.invoiceDetail.customer,
-    customerName: item.invoiceDetail.cloCustName,
-    clNumber: item.invoiceDetail.clnumber,
-    clDate: moment(item.invoiceDetail.cldate).format("MM/DD/YYYY"),
-    invoiceNo: item.invoiceDetail.invoiceno,
-    invoiceDate: moment(item.invoiceDetail.invdate).format("MM/DD/YYYY"),
-    emailSendDate: item.emailSendDate
-      ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm")
-      : "-",
-    status: item?.statuses?.join(","),
-    statusRemark: item?.statusRemark?.join(","),
-  }));
+    const searchParam = {};
+    params.forEach((value, key) => {
+      searchParam[key] = value;
+    });
 
-  csvWriter.writeRecords(flatData).then(() => {
-    res.download(fileName);
-  });
+    let logRPAs = [];
+
+    const db = mongoose.connection;
+    const collection = db.collection("logRPA");
+
+    if (reportType === "CURRENT") {
+      // Extract pagination params from searchParam
+      const page = Math.max(parseInt(searchParam.page, 10) || 1, 1);
+      const parsedPageSize = parseInt(searchParam.pageSize, 10);
+      const pageSize = Number.isNaN(parsedPageSize)
+        ? 10
+        : Math.min(Math.max(parsedPageSize, 1), 500);
+      const skip = (page - 1) * pageSize;
+
+      // Remove pagination params so they don't interfere with query building
+      delete searchParam.page;
+      delete searchParam.pageSize;
+
+      const query = buildLogRPAQuery(searchParam);
+      logRPAs = await collection.find(query).skip(skip).limit(pageSize).toArray();
+    } else {
+      logRPAs = await collection.find().toArray();
+    }
+
+    const epoch = new Date().getTime().toString();
+    const fileName = `available-document-${reportType.toLowerCase()}-${epoch}.csv`;
+
+    // Build CSV content directly (no file system required)
+    const headers = [
+      'ACCOUNT ID',
+      'CUSTOMER NAME',
+      'CL NUMBER',
+      'CL DATE',
+      'INVOICE NO',
+      'INVOICE DATE',
+      'EMAIL SENDING DATE',
+      'STATUS',
+      'STATUS REMARK',
+    ];
+
+    const rows = logRPAs.map((item) => [
+      item.invoiceDetail?.customer || '',
+      item.invoiceDetail?.cloCustName || '',
+      item.invoiceDetail?.clnumber || '',
+      item.invoiceDetail?.cldate ? moment(item.invoiceDetail.cldate).format('MM/DD/YYYY') : '',
+      item.invoiceDetail?.invoiceno || '',
+      item.invoiceDetail?.invdate ? moment(item.invoiceDetail.invdate).format('MM/DD/YYYY') : '',
+      item.emailSendDate ? moment(item.emailSendDate).format('MM/DD/YYYY HH:mm') : '-',
+      item?.statuses?.join(',') || '',
+      item?.statusRemark?.join(',') || '',
+    ]);
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map(row => row.map(escapeCSVField).join(','))
+    ].join('\r\n');
+
+    const buffer = Buffer.from(csvContent, 'utf-8');
+
+    // Save CSV file to exports folder for record-keeping
+    const exportsDir = path.join(__dirname, '..', 'exports');
+    const filePath = path.join(exportsDir, fileName);
+    try {
+      await fs.mkdir(exportsDir, { recursive: true });
+      await fs.writeFile(filePath, buffer);
+      console.log(`CSV file saved to: ${filePath}`);
+    } catch (writeErr) {
+      // Log file write error but don't fail the export — download still proceeds
+      console.error('Failed to save CSV to exports folder:', writeErr.message);
+    }
+
+    // Send CSV buffer directly to the user for immediate download
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+    res.setHeader('Content-Length', buffer.length);
+    res.send(buffer);
+  } catch (error) {
+    console.error('Error in logRPA exports():', error);
+    console.error('Stack trace:', error.stack);
+    res.status(500).json({ error: 'Failed to generate export file', message: error.message });
+  }
 };
