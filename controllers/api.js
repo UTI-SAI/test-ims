@@ -128,6 +128,58 @@ exports.sendInvoiceEmail = async (req, res) => {
       });
     }
 
+    // Validasi: Collect semua invoice numbers yang ada di logRPA
+    console.info(`[${requestId}] Starting invoice completeness validation...`);
+    const expectedInvoiceNos = new Set();
+    logsResult.forEach(log => {
+      if (log && log.invoiceDetail && log.invoiceDetail.invoiceno) {
+        expectedInvoiceNos.add(String(log.invoiceDetail.invoiceno).trim());
+      }
+    });
+
+    // Normalize requested invoice numbers
+    const requestedInvoiceNos = new Set(
+      Array.isArray(invoiceNo)
+        ? invoiceNo.map(inv => String(inv).trim())
+        : [String(invoiceNo).trim()]
+    );
+
+    console.info(`[${requestId}] Invoice completeness check:`, {
+      expectedCount: expectedInvoiceNos.size,
+      expectedInvoices: Array.from(expectedInvoiceNos),
+      requestedCount: requestedInvoiceNos.size,
+      requestedInvoices: Array.from(requestedInvoiceNos)
+    });
+
+    // Validasi apakah semua invoice sudah lengkap
+    if (expectedInvoiceNos.size > 0 && requestedInvoiceNos.size !== expectedInvoiceNos.size) {
+      const missingInvoices = Array.from(expectedInvoiceNos).filter(
+        inv => !requestedInvoiceNos.has(inv)
+      );
+      const extraInvoices = Array.from(requestedInvoiceNos).filter(
+        inv => !expectedInvoiceNos.has(inv)
+      );
+
+      console.error(`[${requestId}] Invoice count mismatch detected:`, {
+        expectedCount: expectedInvoiceNos.size,
+        receivedCount: requestedInvoiceNos.size,
+        missingInvoices,
+        extraInvoices
+      });
+
+      return res.status(400).json({
+        message: `Invoice data incomplete. Expected ${expectedInvoiceNos.size} invoice(s) but only ${requestedInvoiceNos.size} received.`,
+        details: {
+          expectedCount: expectedInvoiceNos.size,
+          receivedCount: requestedInvoiceNos.size,
+          missingInvoices,
+          extraInvoices: extraInvoices.length > 0 ? extraInvoices : undefined
+        }
+      });
+    }
+
+    console.info(`[${requestId}] Invoice completeness validation passed`);
+
     // Bug Fix #3: Validate logs structure
     const logs = logsResult[0];
     if (!logs || !logs.invoiceDetail) {
