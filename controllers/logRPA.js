@@ -216,8 +216,49 @@ exports.exports = async (req, res) => {
     const db = mongoose.connection;
     const collection = db.collection("logRPA");
 
+    if (reportType === "ENTIRE") {
+      const ENTIRE_DIR = path.join(__dirname, '..', 'exports', 'entire');
+      try {
+        await fs.access(ENTIRE_DIR);
+      } catch {
+        return res.status(404).json({
+          error: 'Export directory not found',
+          message: 'Folder exports/entire/ belum tersedia.',
+        });
+      }
+
+      const files = await fs.readdir(ENTIRE_DIR);
+      const csvFiles = files.filter(f => f.endsWith('.csv'));
+      if (csvFiles.length === 0) {
+        return res.status(404).json({
+          error: 'No CSV file found',
+          message: 'Belum ada file CSV di folder exports/entire/.',
+        });
+      }
+
+      const fileStats = await Promise.all(
+        csvFiles.map(async (fileName) => {
+          const filePath = path.join(ENTIRE_DIR, fileName);
+          const stat = await fs.stat(filePath);
+          return { fileName, filePath, mtime: stat.mtime };
+        })
+      );
+      fileStats.sort((a, b) => b.mtime - a.mtime);
+
+      const latest = fileStats[0];
+      const buffer = await fs.readFile(latest.filePath);
+
+      // Buat random angka menggunakan epoch timestamp (sama seperti CURRENT)
+      const epoch = new Date().getTime().toString();
+      const randomFileName = `available-document-entire-${epoch}.csv`;
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${randomFileName}"`);
+      res.setHeader('Content-Length', buffer.length);
+      return res.send(buffer);
+    }
+
     if (reportType === "CURRENT") {
-      // Extract pagination params from searchParam
       const page = Math.max(parseInt(searchParam.page, 10) || 1, 1);
       const parsedPageSize = parseInt(searchParam.pageSize, 10);
       const pageSize = Number.isNaN(parsedPageSize)
@@ -232,7 +273,10 @@ exports.exports = async (req, res) => {
       const query = buildLogRPAQuery(searchParam);
       logRPAs = await collection.find(query).skip(skip).limit(pageSize).toArray();
     } else {
-      logRPAs = await collection.find().toArray();
+      return res.status(400).json({
+        error: 'Invalid export type',
+        message: `Export type "${reportType}" is not supported.`,
+      });
     }
 
     const epoch = new Date().getTime().toString();
