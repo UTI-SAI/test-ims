@@ -3,7 +3,9 @@ const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
 const { createQueryString } = require("../helpers/createQueryString");
 const fs = require('fs').promises;
+const fsSync = require('fs');
 const path = require('path');
+const AVAILABLE_DOC_ENTIRE_CSV_PATH = path.join(__dirname, '..', 'exports', 'entire', 'available-document-entire-master.csv');
 
 const buildLogRPAQuery = (params) => {
   const {
@@ -217,45 +219,17 @@ exports.exports = async (req, res) => {
     const collection = db.collection("logRPA");
 
     if (reportType === "ENTIRE") {
-      const ENTIRE_DIR = path.join(__dirname, '..', 'exports', 'entire');
-      try {
-        await fs.access(ENTIRE_DIR);
-      } catch {
+      if (!fsSync.existsSync(AVAILABLE_DOC_ENTIRE_CSV_PATH)) {
         return res.status(404).json({
-          error: 'Export directory not found',
-          message: 'Folder exports/entire/ belum tersedia.',
+          error: 'Entire export file not found. Please contact administrator.',
         });
       }
 
-      const files = await fs.readdir(ENTIRE_DIR);
-      const csvFiles = files.filter(f => f.endsWith('.csv'));
-      if (csvFiles.length === 0) {
-        return res.status(404).json({
-          error: 'No CSV file found',
-          message: 'Belum ada file CSV di folder exports/entire/.',
-        });
-      }
-
-      const fileStats = await Promise.all(
-        csvFiles.map(async (fileName) => {
-          const filePath = path.join(ENTIRE_DIR, fileName);
-          const stat = await fs.stat(filePath);
-          return { fileName, filePath, mtime: stat.mtime };
-        })
-      );
-      fileStats.sort((a, b) => b.mtime - a.mtime);
-
-      const latest = fileStats[0];
-      const buffer = await fs.readFile(latest.filePath);
-
-      // Buat random angka menggunakan epoch timestamp (sama seperti CURRENT)
       const epoch = new Date().getTime().toString();
-      const randomFileName = `available-document-entire-${epoch}.csv`;
-
       res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${randomFileName}"`);
-      res.setHeader('Content-Length', buffer.length);
-      return res.send(buffer);
+      res.setHeader('Content-Disposition', `attachment; filename="available-document-entire-${epoch}.csv"`);
+      const fileStream = fsSync.createReadStream(AVAILABLE_DOC_ENTIRE_CSV_PATH);
+      return fileStream.pipe(res);
     }
 
     if (reportType === "CURRENT") {

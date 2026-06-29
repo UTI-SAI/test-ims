@@ -1,11 +1,15 @@
 const moment = require("moment");
 const ObjectId = require("mongodb").ObjectId;
 const mongoose = require("mongoose");
+const path = require("path");
+const fs = require("fs");
 const { createQueryString } = require("../helpers/createQueryString");
 const listFilesInDirectory = require("../helpers/listFilesInDirectory");
 const ExcelJS = require('exceljs');
 const sendEmail = require("../helpers/sendEmail");
 const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoiceEmail");
+const BILLING_ENTIRE_CSV_PATH = path.join(__dirname, '..', 'exports', 'entire', 'billing-entire-master.csv');
+const CUSTOMER_ENTIRE_CSV_PATH = path.join(__dirname, '..', 'exports', 'entire', 'user-billing-entire-master.csv');
 
 exports.fetch = async (req, res) => {
   try {
@@ -500,7 +504,6 @@ exports.cancelReject = async (req, res) => {
     const collection = db.collection("billing");
     console.info("Database connection established");
 
-    // Get invoice data before updating
     const invoiceData = await collection.findOne({ _id: new ObjectId(id) });
     console.info("Invoice data found:", invoiceData ? "Yes" : "No");
 
@@ -509,13 +512,11 @@ exports.cancelReject = async (req, res) => {
       return res.status(404).send("Invoice not found");
     }
 
-    // Check if it's currently rejected
     if (!invoiceData.isRejected) {
       console.error("❌ Invoice is not currently rejected:", id);
       return res.status(400).send("Invoice is not rejected");
     }
 
-    // Prepare cancel reject reason with timestamp
     const cancelRejectEntry = {
       reason: reason.trim(),
       date: new Date().toISOString(),
@@ -678,6 +679,17 @@ exports.rejectInvoiceByAdmin = async (req, res) => {
   }
 };
 
+const escapeCSVField = (val) => {
+  if (val === null || val === undefined) {
+    return '';
+  }
+  const str = String(val);
+  if (str.includes(',') || str.includes('"') || str.includes('\n') || str.includes('\r')) {
+    return '"' + str.replace(/"/g, '""') + '"';
+  }
+  return str;
+};
+
 exports.exports = async (req, res) => {
   try {
     const { HOST } = process.env;
@@ -689,9 +701,6 @@ exports.exports = async (req, res) => {
     params.forEach((value, key) => {
       searchParam[key] = value;
     });
-
-    let billings = [];
-    const ENTIRE_EXPORT_LIMIT = 5000;
 
     const db = mongoose.connection;
     const collection = db.collection("billing");
@@ -709,6 +718,8 @@ exports.exports = async (req, res) => {
       return res.render('downloadMultipleInvoices', { ids, isStamped });
     }
 
+    let cursor;
+
     if (reportType === "CURRENT") {
       const page = Math.max(parseInt(searchParam.page, 10) || 1, 1);
       const parsedPageSize = parseInt(searchParam.pageSize, 10);
@@ -721,7 +732,104 @@ exports.exports = async (req, res) => {
       delete searchParam.pageSize;
 
       const query = exports.buildBillingSearchQuery(searchParam);
-      billings = await collection.find(query).skip(skip).limit(pageSize).toArray();
+      const items = await collection.find(query).skip(skip).limit(pageSize).toArray();
+
+      const epoch = new Date().getTime().toString();
+      const fileName = `billing-current-${epoch}.csv`;
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+      const headers = [
+        'ACCOUNT ID',
+        'CUSTOMER NAME',
+        'CL NUMBER',
+        'CL DATE',
+        'INVOICE NO',
+        'INVOICE DATE',
+        'EMAIL SENT',
+        'EMAIL SENDING DATE',
+        'STATUS',
+        'EXCEL SUMMARY INVOICE',
+        'REASON REJECT',
+        'PIC REJECT',
+        'REJECT DATE',
+        'REASON CANCEL REJECT',
+        'PIC CANCEL REJECT',
+        'CANCEL REJECT DATE'
+      ];
+
+      const rows = [];
+      for (const item of items) {
+        try {
+          let rejectionReason = '';
+          let picReject = '';
+          let rejectionDates = '';
+          const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
+
+          if (rejectionEntries.length > 0) {
+            let num = 1;
+            rejectionEntries.forEach(reason => {
+              rejectionReason += `${num}. ${reason.reason}\n`;
+              picReject += `${num}. ${reason.pic || '-'}\n`;
+              rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+              num++;
+            });
+          }
+
+          let cancelRejectReason = '';
+          let picCancelReject = '';
+          let cancelRejectDates = '';
+          const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
+            ? item.cancelRejectReasons
+            : [];
+
+          if (cancelRejectEntries.length > 0) {
+            let num = 1;
+            cancelRejectEntries.forEach(reason => {
+              cancelRejectReason += `${num}. ${reason.reason}\n`;
+              picCancelReject += `${num}. ${reason.pic || '-'}\n`;
+              cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+              num++;
+            });
+          }
+
+          rows.push([
+            item.accountID || '',
+            item.invoice?.cloCustName || '',
+            item.invoice?.clnumber || '',
+            item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
+            item.invoice?.invoiceno || '',
+            item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
+            item.sentTo || '',
+            item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : '',
+            getBillingStatus(item),
+            item.excelSummaryInvoice ? `${HOST}/uploads/${item.excelSummaryInvoice}` : '',
+            rejectionReason,
+            picReject,
+            rejectionDates,
+            cancelRejectReason,
+            picCancelReject,
+            cancelRejectDates
+          ]);
+        } catch (rowError) {
+          console.error('Error processing billing item in csv generation:', item._id, rowError);
+          rows.push([
+            item.accountID || '',
+            'Error',
+            '', '', '', '', '', '', '', '',
+            'Error processing this row',
+            '', '', '', '', ''
+          ]);
+        }
+      }
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(escapeCSVField).join(','))
+      ].join('\r\n');
+
+      return res.send(Buffer.from(csvContent, 'utf-8'));
     } else if (reportType === "MULTIPLE_ROW") {
       if (!selectedIds) {
         return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
@@ -752,148 +860,142 @@ exports.exports = async (req, res) => {
         return res.status(400).json({ error: "No valid IDs provided" });
       }
       
-      billings = await collection.find({ _id: { $in: validIds } }).toArray();
+      cursor = collection.find({ _id: { $in: validIds } });
     } else {
-      const totalRows = await collection.estimatedDocumentCount();
-      if (totalRows > ENTIRE_EXPORT_LIMIT) {
-        return res.status(400).json({
-          error: `ENTIRE export is limited to ${ENTIRE_EXPORT_LIMIT} rows`,
-          totalRows,
-          limit: ENTIRE_EXPORT_LIMIT,
-          suggestion: "Please refine your filter or use CURRENT/MULTIPLE_ROW export",
-        });
+      // ENTIRE export
+      // For ADMIN and SUPER_ADMIN: serve pre-generated CSV file
+      if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
+        if (!fs.existsSync(BILLING_ENTIRE_CSV_PATH)) {
+          return res.status(404).json({ error: 'Entire export file not found. Please contact administrator.' });
+        }
+        const epoch = new Date().getTime().toString();
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="billing-entire-${epoch}.csv"`);
+        const fileStream = fs.createReadStream(BILLING_ENTIRE_CSV_PATH);
+        return fileStream.pipe(res);
       }
-
-      billings = await collection.find().limit(ENTIRE_EXPORT_LIMIT).toArray();
+      cursor = collection.find();
     }
 
     const epoch = new Date().getTime().toString();
     const fileName = `billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
-  
-  // Create workbook and worksheet
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Billing Data');
 
-  // Define columns
-  worksheet.columns = [
-    { header: 'ACCOUNT ID', key: 'accountID', width: 15 },
-    { header: 'CUSTOMER NAME', key: 'customerName', width: 30 },
-    { header: 'CL NUMBER', key: 'clNumber', width: 15 },
-    { header: 'CL DATE', key: 'clDate', width: 12 },
-    { header: 'INVOICE NO', key: 'invoiceNo', width: 15 },
-    { header: 'INVOICE DATE', key: 'invoiceDate', width: 12 },
-    { header: 'EMAIL SENT', key: 'emailSent', width: 30 },
-    { header: 'EMAIL SENDING DATE', key: 'emailSendDate', width: 20 },
-    { header: 'STATUS', key: 'status', width: 20 },
-    { header: 'EXCEL SUMMARY INVOICE', key: 'excelSummaryInvoice', width: 50 },
-    { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
-    { header: 'PIC REJECT', key: 'picReject', width: 30 },
-    { header: 'REJECT DATE', key: 'rejectionDates', width: 30 },
-    { header: 'REASON CANCEL REJECT', key: 'cancelRejectReason', width:  100},
-    { header: 'PIC CANCEL REJECT', key: 'picCancelReject', width: 30 },
-    { header: 'CANCEL REJECT DATE', key: 'cancelRejectDates', width: 30 },
-  ];
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
-  // Style header row
-  worksheet.getRow(1).font = { bold: true };
-  worksheet.getRow(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFD3D3D3' }
-  };
+    // Create streaming workbook
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: res,
+      useStyles: true,
+      useSharedStrings: true
+    });
 
-  const flatData = billings.map((item) => {
-    try {
-       let rejectionReason = '';
-      let picReject = '';
-      let rejectionDates = '';
-      const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
+    const worksheet = workbook.addWorksheet('Billing Data');
 
-      if (rejectionEntries.length > 0) {
-        let num = 1;
-        rejectionEntries.forEach(reason => {
-          rejectionReason += `${num}. ${reason.reason}\n`;
-          picReject += `${num}. ${reason.pic || '-'}\n`;
-          rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+    // Define columns
+    worksheet.columns = [
+      { header: 'ACCOUNT ID', key: 'accountID', width: 15 },
+      { header: 'CUSTOMER NAME', key: 'customerName', width: 30 },
+      { header: 'CL NUMBER', key: 'clNumber', width: 15 },
+      { header: 'CL DATE', key: 'clDate', width: 12 },
+      { header: 'INVOICE NO', key: 'invoiceNo', width: 15 },
+      { header: 'INVOICE DATE', key: 'invoiceDate', width: 12 },
+      { header: 'EMAIL SENT', key: 'emailSent', width: 30 },
+      { header: 'EMAIL SENDING DATE', key: 'emailSendDate', width: 20 },
+      { header: 'STATUS', key: 'status', width: 20 },
+      { header: 'EXCEL SUMMARY INVOICE', key: 'excelSummaryInvoice', width: 50 },
+      { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
+      { header: 'PIC REJECT', key: 'picReject', width: 30 },
+      { header: 'REJECT DATE', key: 'rejectionDates', width: 30 },
+      { header: 'REASON CANCEL REJECT', key: 'cancelRejectReason', width:  100},
+      { header: 'PIC CANCEL REJECT', key: 'picCancelReject', width: 30 },
+      { header: 'CANCEL REJECT DATE', key: 'cancelRejectDates', width: 30 },
+    ];
 
-          num++;
-        })
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' }
+    };
+
+    // Iterate through cursor and add rows one by one
+    for await (const item of cursor) {
+      try {
+        let rejectionReason = '';
+        let picReject = '';
+        let rejectionDates = '';
+        const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
+
+        if (rejectionEntries.length > 0) {
+          let num = 1;
+          rejectionEntries.forEach(reason => {
+            rejectionReason += `${num}. ${reason.reason}\n`;
+            picReject += `${num}. ${reason.pic || '-'}\n`;
+            rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+            num++;
+          });
+        }
+
+        let cancelRejectReason = '';
+        let picCancelReject = '';
+        let cancelRejectDates = '';
+        const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
+          ? item.cancelRejectReasons
+          : [];
+
+        if (cancelRejectEntries.length > 0) {
+          let num = 1;
+          cancelRejectEntries.forEach(reason => {
+            cancelRejectReason += `${num}. ${reason.reason}\n`;
+            picCancelReject += `${num}. ${reason.pic || '-'}\n`;
+            cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+            num++;
+          });
+        }
+
+        const flatRow = {
+          accountID: item.accountID || '',
+          customerName: item.invoice?.cloCustName || '',
+          clNumber: item.invoice?.clnumber || '',
+          clDate: item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
+          invoiceNo: item.invoice?.invoiceno || '',
+          invoiceDate: item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
+          emailSent: item.sentTo || '',
+          emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : '',
+          status: getBillingStatus(item),
+          excelSummaryInvoice: item.excelSummaryInvoice ? `${HOST}/uploads/${item.excelSummaryInvoice}` : '',
+          rejectionReason,
+          picReject,
+          rejectionDates,
+          cancelRejectReason,
+          picCancelReject,
+          cancelRejectDates,
+        };
+
+        worksheet.addRow(flatRow).commit();
+      } catch (rowError) {
+        console.error('Error processing billing item in stream:', item._id, rowError);
+        // Add error row so the export doesn't fail completely
+        worksheet.addRow({
+          accountID: item.accountID || '',
+          customerName: 'Error',
+          rejectionReason: 'Error processing this row',
+        }).commit();
       }
-
-      let cancelRejectReason = '';
-      let picCancelReject = '';
-      let cancelRejectDates = '';
-      const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
-        ? item.cancelRejectReasons
-        : [];
-
-      if (cancelRejectEntries.length > 0) {
-        let num = 1;
-        cancelRejectEntries.forEach(reason => {
-          cancelRejectReason += `${num}. ${reason.reason}\n`;
-          picCancelReject += `${num}. ${reason.pic || '-'}\n`;
-          cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
-
-          num++;
-        })
-      }
-
-      return {
-        accountID: item.accountID || '',
-        customerName: item.invoice?.cloCustName || '',
-        clNumber: item.invoice?.clnumber || '',
-        clDate: item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
-        invoiceNo: item.invoice?.invoiceno || '',
-        invoiceDate: item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
-        emailSent: item.sentTo || '',
-        emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : '',
-        status: getBillingStatus(item),
-        excelSummaryInvoice: item.excelSummaryInvoice ? `${HOST}/uploads/${item.excelSummaryInvoice}` : '',
-        rejectionReason,
-        picReject,
-        rejectionDates,
-        cancelRejectReason,
-        picCancelReject,
-        cancelRejectDates,
-      };
-    } catch (error) {
-      console.error('Error processing billing item:', item._id, error);
-      return {
-        accountID: item.accountID || '',
-        customerName: 'Error',
-        clNumber: '',
-        clDate: '',
-        invoiceNo: '',
-        invoiceDate: '',
-        emailSent: '',
-        emailSendDate: '',
-        status: 'Error',
-        excelSummaryInvoice: '',
-        rejectionReason: 'Error processing this row',
-        picReject: 'Error',
-        rejectionDates: 'Error',
-        cancelRejectReason: 'Error',
-        picCancelReject: 'Error',
-        cancelRejectDates: 'Error',
-      };
     }
-  });
 
-  // Add rows
-  worksheet.addRows(flatData);
+    // Finalize workbook
+    worksheet.commit();
+    await workbook.commit();
 
-  // Write to buffer and stream to response (no file system required)
-  const buffer = await workbook.xlsx.writeBuffer();
-  
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-  res.setHeader('Content-Length', buffer.length);
-  
-  res.send(buffer);
   } catch (error) {
     console.error('Error in exports():', error);
     console.error('Stack trace:', error.stack);
-    res.status(500).json({ error: 'Failed to generate export file', message: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to generate export file', message: error.message });
+    }
   }
 };
 
@@ -1068,9 +1170,6 @@ exports.exportsCustomerBilling = async (req, res) => {
     // Filter by account id
     const clonedUser = JSON.parse(JSON.stringify(req.user));
     
-    let billings = [];
-    const ENTIRE_EXPORT_LIMIT = 5000;
-
     const db = mongoose.connection;
     const collection = db.collection("billing");
 
@@ -1086,6 +1185,8 @@ exports.exportsCustomerBilling = async (req, res) => {
       // Render view for multiple invoice downloads
       return res.render('downloadMultipleInvoices', { ids, isStamped });
     }
+
+    let cursor;
 
     if (reportType === "CURRENT") {
       const page = Math.max(parseInt(searchParam.page, 10) || 1, 1);
@@ -1106,7 +1207,104 @@ exports.exportsCustomerBilling = async (req, res) => {
       }
       
       query["billingStatus"] = { $ne: "CANCELLED" };
-      billings = await collection.find(query).skip(skip).limit(pageSize).toArray();
+      const items = await collection.find(query).skip(skip).limit(pageSize).toArray();
+
+      const epoch = new Date().getTime().toString();
+      const fileName = `user-billing-current-${epoch}.csv`;
+
+      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
+
+      const headers = [
+        'ACCOUNT ID',
+        'CUSTOMER NAME',
+        'CL NUMBER',
+        'CL DATE',
+        'INVOICE NO',
+        'INVOICE DATE',
+        'DOWNLOAD INVOICE',
+        'DOWNLOAD  INVOICE STAMPED',
+        'EMAIL SEND DATE',
+        'STATUS',
+        'REASON REJECT',
+        'PIC REJECT',
+        'REJECT DATE',
+        'REASON CANCEL REJECT',
+        'PIC CANCEL REJECT',
+        'CANCEL REJECT DATE'
+      ];
+
+      const rows = [];
+      for (const item of items) {
+        try {
+          let rejectionReason = '';
+          let picReject = '';
+          let rejectionDates = '';
+          const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
+
+          if (rejectionEntries.length > 0) {
+            let num = 1;
+            rejectionEntries.forEach(reason => {
+              rejectionReason += `${num}. ${reason.reason}\n`;
+              picReject += `${num}. ${reason.pic || '-'}\n`;
+              rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+              num++;
+            });
+          }
+
+          let cancelRejectReason = '';
+          let picCancelReject = '';
+          let cancelRejectDates = '';
+          const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
+            ? item.cancelRejectReasons
+            : [];
+
+          if (cancelRejectEntries.length > 0) {
+            let num = 1;
+            cancelRejectEntries.forEach(reason => {
+              cancelRejectReason += `${num}. ${reason.reason}\n`;
+              picCancelReject += `${num}. ${reason.pic || '-'}\n`;
+              cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+              num++;
+            });
+          }
+
+          rows.push([
+            item.accountID || '',
+            item.invoice?.cloCustName || '',
+            item.invoice?.clnumber || '',
+            item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
+            item.invoice?.invoiceno || '',
+            item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
+            `${HOST}/api/invoices/download/${item._id.toString()}`,
+            `${HOST}/api/invoices/download-stamped/${item._id.toString()}`,
+            item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : "-",
+            getBillingStatus(item),
+            rejectionReason,
+            picReject,
+            rejectionDates,
+            cancelRejectReason,
+            picCancelReject,
+            cancelRejectDates
+          ]);
+        } catch (rowError) {
+          console.error('Error processing customer billing item in csv generation:', item._id, rowError);
+          rows.push([
+            item.accountID || '',
+            'Error',
+            '', '', '', '', '', '', '', '',
+            'Error processing this row',
+            '', '', '', '', ''
+          ]);
+        }
+      }
+
+      const csvContent = [
+        headers.join(','),
+        ...rows.map(row => row.map(escapeCSVField).join(','))
+      ].join('\r\n');
+
+      return res.send(Buffer.from(csvContent, 'utf-8'));
     } else if (reportType === "MULTIPLE_ROW") {
       if (!selectedIds) {
         return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
@@ -1144,157 +1342,152 @@ exports.exportsCustomerBilling = async (req, res) => {
         query["accountID"] = { $in: clonedUser.accountID };
       }
       
-      billings = await collection.find(query).toArray();
+      cursor = collection.find(query);
     } else {
+      // ENTIRE export
+      // For ADMIN and SUPER_ADMIN: serve pre-generated CSV file
+      if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
+        if (!fs.existsSync(CUSTOMER_ENTIRE_CSV_PATH)) {
+          return res.status(404).json({ error: 'Entire export file not found. Please contact administrator.' });
+        }
+        const epoch = new Date().getTime().toString();
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename="user-billing-entire-${epoch}.csv"`);
+        const fileStream = fs.createReadStream(CUSTOMER_ENTIRE_CSV_PATH);
+        return fileStream.pipe(res);
+      }
+      // For USER: stream from database
       const filter = {
         billingStatus: { $ne: "CANCELLED" }
       };
       
-      // Add account filter for non-superadmin users
+      // Add account filter for users
       if (req.user.role === 'USER' && clonedUser.accountID && Array.isArray(clonedUser.accountID)) {
         filter["accountID"] = { $in: clonedUser.accountID };
       }
 
-      const totalRows = await collection.countDocuments(filter);
-      if (totalRows > ENTIRE_EXPORT_LIMIT) {
-        return res.status(400).json({
-          error: `ENTIRE export is limited to ${ENTIRE_EXPORT_LIMIT} rows`,
-          totalRows,
-          limit: ENTIRE_EXPORT_LIMIT,
-          suggestion: "Please refine your filter or use CURRENT/MULTIPLE_ROW export",
-        });
-      }
-      
-      billings = await collection.find(filter).limit(ENTIRE_EXPORT_LIMIT).toArray();
+      cursor = collection.find(filter);
     }
 
     const epoch = new Date().getTime().toString();
     const fileName = `user-billing-${reportType.toLowerCase()}-${epoch}.xlsx`;
 
-  // Create workbook and worksheet
-  const workbook = new ExcelJS.Workbook();
-  const worksheet = workbook.addWorksheet('Customer Billing');
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
 
-  // Define columns
-  worksheet.columns = [
-    { header: 'ACCOUNT ID', key: 'accountID', width: 15 },
-    { header: 'CUSTOMER NAME', key: 'cloCustName', width: 30 },
-    { header: 'CL NUMBER', key: 'clNumber', width: 15 },
-    { header: 'CL DATE', key: 'clDate', width: 12 },
-    { header: 'INVOICE NO', key: 'invoiceNo', width: 15 },
-    { header: 'INVOICE DATE', key: 'invoiceDate', width: 12 },
-    { header: 'DOWNLOAD INVOICE', key: 'downloadInvoice', width: 50 },
-    { header: 'DOWNLOAD  INVOICE STAMPED', key: 'downloadInvoiceStamped', width: 50 },
-    { header: 'EMAIL SEND DATE', key: 'emailSendDate', width: 20 },
-    { header: 'STATUS', key: 'status', width: 20 },
-    { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
-    { header: 'PIC REJECT', key: 'picReject', width: 30 },
-    { header: 'REJECT DATE', key: 'rejectionDates', width: 30 },
-    { header: 'REASON CANCEL REJECT', key: 'cancelRejectReason', width:  100},
-    { header: 'PIC CANCEL REJECT', key: 'picCancelReject', width: 30 },
-    { header: 'CANCEL REJECT DATE', key: 'cancelRejectDates', width: 30 },
-  ];
+    // Create streaming workbook
+    const workbook = new ExcelJS.stream.xlsx.WorkbookWriter({
+      stream: res,
+      useStyles: true,
+      useSharedStrings: true
+    });
 
-  // Style header row
-  worksheet.getRow(1).font = { bold: true };
-  worksheet.getRow(1).fill = {
-    type: 'pattern',
-    pattern: 'solid',
-    fgColor: { argb: 'FFD3D3D3' }
-  };
+    const worksheet = workbook.addWorksheet('Customer Billing');
 
-  const flatData = billings.map((item) => {
-    try {
-      let rejectionReason = '';
-      let picReject = '';
-      let rejectionDates = '';
-      const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
+    // Define columns
+    worksheet.columns = [
+      { header: 'ACCOUNT ID', key: 'accountID', width: 15 },
+      { header: 'CUSTOMER NAME', key: 'cloCustName', width: 30 },
+      { header: 'CL NUMBER', key: 'clNumber', width: 15 },
+      { header: 'CL DATE', key: 'clDate', width: 12 },
+      { header: 'INVOICE NO', key: 'invoiceNo', width: 15 },
+      { header: 'INVOICE DATE', key: 'invoiceDate', width: 12 },
+      { header: 'DOWNLOAD INVOICE', key: 'downloadInvoice', width: 50 },
+      { header: 'DOWNLOAD  INVOICE STAMPED', key: 'downloadInvoiceStamped', width: 50 },
+      { header: 'EMAIL SEND DATE', key: 'emailSendDate', width: 20 },
+      { header: 'STATUS', key: 'status', width: 20 },
+      { header: 'REASON REJECT', key: 'rejectionReason', width:  100},
+      { header: 'PIC REJECT', key: 'picReject', width: 30 },
+      { header: 'REJECT DATE', key: 'rejectionDates', width: 30 },
+      { header: 'REASON CANCEL REJECT', key: 'cancelRejectReason', width:  100},
+      { header: 'PIC CANCEL REJECT', key: 'picCancelReject', width: 30 },
+      { header: 'CANCEL REJECT DATE', key: 'cancelRejectDates', width: 30 },
+    ];
 
-      if (rejectionEntries.length > 0) {
-        let num = 1;
-        rejectionEntries.forEach(reason => {
-          rejectionReason += `${num}. ${reason.reason}\n`;
-          picReject += `${num}. ${reason.pic || '-'}\n`;
-          rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+    // Style header row
+    worksheet.getRow(1).font = { bold: true };
+    worksheet.getRow(1).fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FFD3D3D3' }
+    };
 
-          num++;
-        })
+    // Iterate through cursor and add rows one by one
+    for await (const item of cursor) {
+      try {
+        let rejectionReason = '';
+        let picReject = '';
+        let rejectionDates = '';
+        const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
+
+        if (rejectionEntries.length > 0) {
+          let num = 1;
+          rejectionEntries.forEach(reason => {
+            rejectionReason += `${num}. ${reason.reason}\n`;
+            picReject += `${num}. ${reason.pic || '-'}\n`;
+            rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+            num++;
+          });
+        }
+
+        let cancelRejectReason = '';
+        let picCancelReject = '';
+        let cancelRejectDates = '';
+        const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
+          ? item.cancelRejectReasons
+          : [];
+
+        if (cancelRejectEntries.length > 0) {
+          let num = 1;
+          cancelRejectEntries.forEach(reason => {
+            cancelRejectReason += `${num}. ${reason.reason}\n`;
+            picCancelReject += `${num}. ${reason.pic || '-'}\n`;
+            cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
+            num++;
+          });
+        }
+
+        const flatRow = {
+          accountID: item.accountID || '',
+          cloCustName: item.invoice?.cloCustName || '',
+          clNumber: item.invoice?.clnumber || '',
+          clDate: item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
+          invoiceNo: item.invoice?.invoiceno || '',
+          invoiceDate: item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
+          downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
+          downloadInvoiceStamped: `${HOST}/api/invoices/download-stamped/${item._id.toString()}`,
+          emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : "-",
+          status: getBillingStatus(item),
+          rejectionReason,
+          picReject,
+          rejectionDates,
+          cancelRejectReason,
+          picCancelReject,
+          cancelRejectDates,
+        };
+
+        worksheet.addRow(flatRow).commit();
+      } catch (rowError) {
+        console.error('Error processing billing item in stream:', item._id, rowError);
+        // Add error row so the export doesn't fail completely
+        worksheet.addRow({
+          accountID: item.accountID || '',
+          cloCustName: 'Error',
+          rejectionReason: 'Error processing this row',
+        }).commit();
       }
-
-      let cancelRejectReason = '';
-      let picCancelReject = '';
-      let cancelRejectDates = '';
-      const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
-        ? item.cancelRejectReasons
-        : [];
-
-      if (cancelRejectEntries.length > 0) {
-        let num = 1;
-        cancelRejectEntries.forEach(reason => {
-          cancelRejectReason += `${num}. ${reason.reason}\n`;
-          picCancelReject += `${num}. ${reason.pic || '-'}\n`;
-          cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
-
-          num++;
-        })
-      }
-
-      return {
-        accountID: item.accountID || '',
-        cloCustName: item.invoice?.cloCustName || '',
-        clNumber: item.invoice?.clnumber || '',
-        clDate: item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
-        invoiceNo: item.invoice?.invoiceno || '',
-        invoiceDate: item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
-        downloadInvoice: `${HOST}/api/invoices/download/${item._id.toString()}`,
-        downloadInvoiceStamped: `${HOST}/api/invoices/download-stamped/${item._id.toString()}`,
-        emailSendDate: item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : "-",
-        status: getBillingStatus(item),
-        rejectionReason,
-        picReject,
-        rejectionDates,
-        cancelRejectReason,
-        picCancelReject,
-        cancelRejectDates,
-      };
-      
-    } catch (error) {
-      console.error('Error processing billing item:', item._id, error);
-      return {
-        accountID: item.accountID || '',
-        cloCustName: 'Error',
-        clNumber: '',
-        clDate: '',
-        invoiceNo: '',
-        invoiceDate: '',
-        downloadInvoice: '',
-        emailSendDate: '-',
-        status: 'Error',
-        rejectionReason: 'Error processing this row',
-        picReject: 'Error',
-        rejectionDates: 'Error',
-        cancelRejectReason: 'Error',
-        picCancelReject: 'Error',
-        cancelRejectDates: 'Error',
-      };
     }
-  });
 
-  // Add rows
-  worksheet.addRows(flatData);
+    // Finalize workbook
+    worksheet.commit();
+    await workbook.commit();
 
-  // Write to buffer and stream to response (no file system required)
-  const buffer = await workbook.xlsx.writeBuffer();
-  
-  res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
-  res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-  res.setHeader('Content-Length', buffer.length);
-  
-  res.send(buffer);
   } catch (error) {
     console.error('Error in exportsCustomerBilling():', error);
     console.error('Stack trace:', error.stack);
-    res.status(500).json({ error: 'Failed to generate export file', message: error.message });
+    if (!res.headersSent) {
+      res.status(500).json({ error: 'Failed to generate export file', message: error.message });
+    }
   }
 };
 

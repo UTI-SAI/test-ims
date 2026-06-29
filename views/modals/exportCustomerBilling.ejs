@@ -34,7 +34,11 @@
                                     <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
                                         <span class="form-selectgroup-title strong mb-1">Entire Records</span>
+                                        <% if (user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN')) { %>
                                         <span class="d-block text-muted">Export entire records in database</span>
+                                        <% } else { %>
+                                        <span class="d-block text-muted">Export entire records in database</span>
+                                        <% } %>
                                     </span>
                                 </span>
                             </label>
@@ -317,7 +321,7 @@
                     
                     // Get filename from Content-Disposition header
                     const contentDisposition = response.headers.get('Content-Disposition');
-                    let filename = 'export.xlsx';
+                    let filename = reportType === 'CURRENT' ? 'export.csv' : 'export.xlsx';
                     if (contentDisposition) {
                         const matches = /filename="([^"]+)"/.exec(contentDisposition);
                         if (matches && matches[1]) {

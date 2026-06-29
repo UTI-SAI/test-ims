@@ -1,9 +1,9 @@
-const express = require("express");
+const express = require('express');
 const router = express.Router();
-const apiController = require("../controllers/api");
-const { ensureAPIKey, ensureRoles } = require("../middleware/auth");
-const upload = require("../helpers/upload");
-const { ROLES } = require("../constants");
+const apiController = require('../controllers/api');
+const { ensureAPIKey, ensureRoles } = require('../middleware/auth');
+const upload = require('../helpers/upload');
+const { ROLES } = require('../constants');
 
 /**
  * @swagger
@@ -42,7 +42,7 @@ const { ROLES } = require("../constants");
  *      '404':
  *        description: CL or Invoice not found
  */
-router.post("/invoices/send", ensureAPIKey, apiController.sendInvoiceEmail);
+router.post('/invoices/send', ensureAPIKey, apiController.sendInvoiceEmail);
 
 /**
  * @swagger
@@ -87,19 +87,11 @@ router.post("/invoices/send", ensureAPIKey, apiController.sendInvoiceEmail);
  *            example:
  *              message: Something went wrong
  */
-router.get("/email/status", ensureAPIKey, apiController.getStatusEmail);
+router.get('/email/status', ensureAPIKey, apiController.getStatusEmail);
 
-router.post(
-  "/invoices/cancel/:invoiceNo",
-  ensureAPIKey,
-  apiController.cancelCL
-);
+router.post('/invoices/cancel/:invoiceNo', ensureAPIKey, apiController.cancelCL);
 
-router.post(
-  "/invoices/cancel",
-  ensureAPIKey,
-  apiController.cancelInvoicesBulk
-);
+router.post('/invoices/cancel', ensureAPIKey, apiController.cancelInvoicesBulk);
 
 /**
  * @swagger
@@ -128,44 +120,20 @@ router.post(
  *        description: Invoice retrieved successfully
  */
 
-router.get("/invoices", ensureAPIKey, apiController.retrieveInvoice);
+router.get('/invoices', ensureAPIKey, apiController.retrieveInvoice);
 
-router.post(
-  "/invoices/upload-file",
-  upload.single("file"),
-  apiController.uploadInvoiceFile
-);
+router.post('/invoices/upload-file', upload.single('file'), apiController.uploadInvoiceFile);
 
-router.get(
-  "/invoices/download/:id",
-  ensureRoles(ROLES.SUPER_ADMIN, ROLES.USER),
-  apiController.downloadInvoice
-);
+router.get('/invoices/download/:id', ensureRoles(ROLES.SUPER_ADMIN, ROLES.USER), apiController.downloadInvoice);
 
-router.get(
-  "/invoices/download-stamped/:id",
-  ensureRoles(ROLES.SUPER_ADMIN, ROLES.USER),
-  apiController.downloadInvoiceStamped
-);
+router.get('/invoices/download-stamped/:id', ensureRoles(ROLES.SUPER_ADMIN, ROLES.USER), apiController.downloadInvoiceStamped);
 
-router.post(
-  "/invoices/resend-email",
-  ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
-  apiController.resendBillingEmail
-);
+router.post('/invoices/resend-email', ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), apiController.resendBillingEmail);
 
-router.get(
-  "/billing/all-ids",
-  ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN),
-  apiController.getAllBillingIds
-);
+router.get('/billing/all-ids', ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN), apiController.getAllBillingIds);
 
-router.get(
-  "/customer-billing/all-ids",
-  ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.USER),
-  apiController.getAllCustomerBillingIds
-);
+router.get('/customer-billing/all-ids', ensureRoles(ROLES.SUPER_ADMIN, ROLES.ADMIN, ROLES.USER), apiController.getAllCustomerBillingIds);
 
-router.post("/users/create", apiController.createUser);
+router.post('/users/create', apiController.createUser);
 
 module.exports = router;
