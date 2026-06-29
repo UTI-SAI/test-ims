@@ -8,8 +8,8 @@ const listFilesInDirectory = require("../helpers/listFilesInDirectory");
 const ExcelJS = require('exceljs');
 const sendEmail = require("../helpers/sendEmail");
 const { generateRejectInvoiceEmail } = require("../helpers/generateRejectInvoiceEmail");
-const BILLING_ENTIRE_CSV_PATH = path.join(__dirname, '..', 'exports', 'entire', 'billing-entire-master.csv');
-const CUSTOMER_ENTIRE_CSV_PATH = path.join(__dirname, '..', 'exports', 'entire', 'user-billing-entire-master.csv');
+const BILLING_ENTIRE_XLSX_PATH = path.join(__dirname, '..', 'exports', 'entire', 'billing-entire-master.xlsx');
+const CUSTOMER_ENTIRE_XLSX_PATH = path.join(__dirname, '..', 'exports', 'entire', 'user-billing-entire-master.xlsx');
 
 exports.fetch = async (req, res) => {
   try {
@@ -732,104 +732,7 @@ exports.exports = async (req, res) => {
       delete searchParam.pageSize;
 
       const query = exports.buildBillingSearchQuery(searchParam);
-      const items = await collection.find(query).skip(skip).limit(pageSize).toArray();
-
-      const epoch = new Date().getTime().toString();
-      const fileName = `billing-current-${epoch}.csv`;
-
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-      const headers = [
-        'ACCOUNT ID',
-        'CUSTOMER NAME',
-        'CL NUMBER',
-        'CL DATE',
-        'INVOICE NO',
-        'INVOICE DATE',
-        'EMAIL SENT',
-        'EMAIL SENDING DATE',
-        'STATUS',
-        'EXCEL SUMMARY INVOICE',
-        'REASON REJECT',
-        'PIC REJECT',
-        'REJECT DATE',
-        'REASON CANCEL REJECT',
-        'PIC CANCEL REJECT',
-        'CANCEL REJECT DATE'
-      ];
-
-      const rows = [];
-      for (const item of items) {
-        try {
-          let rejectionReason = '';
-          let picReject = '';
-          let rejectionDates = '';
-          const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
-
-          if (rejectionEntries.length > 0) {
-            let num = 1;
-            rejectionEntries.forEach(reason => {
-              rejectionReason += `${num}. ${reason.reason}\n`;
-              picReject += `${num}. ${reason.pic || '-'}\n`;
-              rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
-              num++;
-            });
-          }
-
-          let cancelRejectReason = '';
-          let picCancelReject = '';
-          let cancelRejectDates = '';
-          const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
-            ? item.cancelRejectReasons
-            : [];
-
-          if (cancelRejectEntries.length > 0) {
-            let num = 1;
-            cancelRejectEntries.forEach(reason => {
-              cancelRejectReason += `${num}. ${reason.reason}\n`;
-              picCancelReject += `${num}. ${reason.pic || '-'}\n`;
-              cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
-              num++;
-            });
-          }
-
-          rows.push([
-            item.accountID || '',
-            item.invoice?.cloCustName || '',
-            item.invoice?.clnumber || '',
-            item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
-            item.invoice?.invoiceno || '',
-            item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
-            item.sentTo || '',
-            item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : '',
-            getBillingStatus(item),
-            item.excelSummaryInvoice ? `${HOST}/uploads/${item.excelSummaryInvoice}` : '',
-            rejectionReason,
-            picReject,
-            rejectionDates,
-            cancelRejectReason,
-            picCancelReject,
-            cancelRejectDates
-          ]);
-        } catch (rowError) {
-          console.error('Error processing billing item in csv generation:', item._id, rowError);
-          rows.push([
-            item.accountID || '',
-            'Error',
-            '', '', '', '', '', '', '', '',
-            'Error processing this row',
-            '', '', '', '', ''
-          ]);
-        }
-      }
-
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(escapeCSVField).join(','))
-      ].join('\r\n');
-
-      return res.send(Buffer.from(csvContent, 'utf-8'));
+      cursor = collection.find(query).skip(skip).limit(pageSize);
     } else if (reportType === "MULTIPLE_ROW") {
       if (!selectedIds) {
         return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
@@ -863,15 +766,15 @@ exports.exports = async (req, res) => {
       cursor = collection.find({ _id: { $in: validIds } });
     } else {
       // ENTIRE export
-      // For ADMIN and SUPER_ADMIN: serve pre-generated CSV file
+      // For ADMIN and SUPER_ADMIN: serve pre-generated XLSX file
       if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
-        if (!fs.existsSync(BILLING_ENTIRE_CSV_PATH)) {
+        if (!fs.existsSync(BILLING_ENTIRE_XLSX_PATH)) {
           return res.status(404).json({ error: 'Entire export file not found. Please contact administrator.' });
         }
         const epoch = new Date().getTime().toString();
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="billing-entire-${epoch}.csv"`);
-        const fileStream = fs.createReadStream(BILLING_ENTIRE_CSV_PATH);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="billing-entire-${epoch}.xlsx"`);
+        const fileStream = fs.createReadStream(BILLING_ENTIRE_XLSX_PATH);
         return fileStream.pipe(res);
       }
       cursor = collection.find();
@@ -1207,104 +1110,7 @@ exports.exportsCustomerBilling = async (req, res) => {
       }
       
       query["billingStatus"] = { $ne: "CANCELLED" };
-      const items = await collection.find(query).skip(skip).limit(pageSize).toArray();
-
-      const epoch = new Date().getTime().toString();
-      const fileName = `user-billing-current-${epoch}.csv`;
-
-      res.setHeader('Content-Type', 'text/csv; charset=utf-8');
-      res.setHeader('Content-Disposition', `attachment; filename="${fileName}"`);
-
-      const headers = [
-        'ACCOUNT ID',
-        'CUSTOMER NAME',
-        'CL NUMBER',
-        'CL DATE',
-        'INVOICE NO',
-        'INVOICE DATE',
-        'DOWNLOAD INVOICE',
-        'DOWNLOAD  INVOICE STAMPED',
-        'EMAIL SEND DATE',
-        'STATUS',
-        'REASON REJECT',
-        'PIC REJECT',
-        'REJECT DATE',
-        'REASON CANCEL REJECT',
-        'PIC CANCEL REJECT',
-        'CANCEL REJECT DATE'
-      ];
-
-      const rows = [];
-      for (const item of items) {
-        try {
-          let rejectionReason = '';
-          let picReject = '';
-          let rejectionDates = '';
-          const rejectionEntries = Array.isArray(item.rejectionReason) ? item.rejectionReason : [];
-
-          if (rejectionEntries.length > 0) {
-            let num = 1;
-            rejectionEntries.forEach(reason => {
-              rejectionReason += `${num}. ${reason.reason}\n`;
-              picReject += `${num}. ${reason.pic || '-'}\n`;
-              rejectionDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
-              num++;
-            });
-          }
-
-          let cancelRejectReason = '';
-          let picCancelReject = '';
-          let cancelRejectDates = '';
-          const cancelRejectEntries = Array.isArray(item.cancelRejectReasons)
-            ? item.cancelRejectReasons
-            : [];
-
-          if (cancelRejectEntries.length > 0) {
-            let num = 1;
-            cancelRejectEntries.forEach(reason => {
-              cancelRejectReason += `${num}. ${reason.reason}\n`;
-              picCancelReject += `${num}. ${reason.pic || '-'}\n`;
-              cancelRejectDates += `${num}. ${moment(reason.date).format("MM/DD/YYYY")}\n`;
-              num++;
-            });
-          }
-
-          rows.push([
-            item.accountID || '',
-            item.invoice?.cloCustName || '',
-            item.invoice?.clnumber || '',
-            item.invoice?.cldate ? moment(item.invoice.cldate).format("MM/DD/YYYY") : '',
-            item.invoice?.invoiceno || '',
-            item.invoice?.invdate ? moment(item.invoice.invdate).format("MM/DD/YYYY") : '',
-            `${HOST}/api/invoices/download/${item._id.toString()}`,
-            `${HOST}/api/invoices/download-stamped/${item._id.toString()}`,
-            item.emailSendDate ? moment(item.emailSendDate).format("MM/DD/YYYY HH:mm") : "-",
-            getBillingStatus(item),
-            rejectionReason,
-            picReject,
-            rejectionDates,
-            cancelRejectReason,
-            picCancelReject,
-            cancelRejectDates
-          ]);
-        } catch (rowError) {
-          console.error('Error processing customer billing item in csv generation:', item._id, rowError);
-          rows.push([
-            item.accountID || '',
-            'Error',
-            '', '', '', '', '', '', '', '',
-            'Error processing this row',
-            '', '', '', '', ''
-          ]);
-        }
-      }
-
-      const csvContent = [
-        headers.join(','),
-        ...rows.map(row => row.map(escapeCSVField).join(','))
-      ].join('\r\n');
-
-      return res.send(Buffer.from(csvContent, 'utf-8'));
+      cursor = collection.find(query).skip(skip).limit(pageSize);
     } else if (reportType === "MULTIPLE_ROW") {
       if (!selectedIds) {
         return res.status(400).json({ error: "selectedIds is required for MULTIPLE_ROW" });
@@ -1345,15 +1151,15 @@ exports.exportsCustomerBilling = async (req, res) => {
       cursor = collection.find(query);
     } else {
       // ENTIRE export
-      // For ADMIN and SUPER_ADMIN: serve pre-generated CSV file
+      // For ADMIN and SUPER_ADMIN: serve pre-generated XLSX file
       if (req.user.role === 'SUPER_ADMIN' || req.user.role === 'ADMIN') {
-        if (!fs.existsSync(CUSTOMER_ENTIRE_CSV_PATH)) {
+        if (!fs.existsSync(CUSTOMER_ENTIRE_XLSX_PATH)) {
           return res.status(404).json({ error: 'Entire export file not found. Please contact administrator.' });
         }
         const epoch = new Date().getTime().toString();
-        res.setHeader('Content-Type', 'text/csv');
-        res.setHeader('Content-Disposition', `attachment; filename="user-billing-entire-${epoch}.csv"`);
-        const fileStream = fs.createReadStream(CUSTOMER_ENTIRE_CSV_PATH);
+        res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+        res.setHeader('Content-Disposition', `attachment; filename="user-billing-entire-${epoch}.xlsx"`);
+        const fileStream = fs.createReadStream(CUSTOMER_ENTIRE_XLSX_PATH);
         return fileStream.pipe(res);
       }
       // For USER: stream from database

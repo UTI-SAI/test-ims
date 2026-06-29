@@ -28,11 +28,7 @@
                                     <span class="me-3"><span class="form-selectgroup-check"></span></span>
                                     <span class="form-selectgroup-label-content">
                                         <span class="form-selectgroup-title strong mb-1">Entire Records</span>
-                                        <% if (user && (user.role === 'SUPER_ADMIN' || user.role === 'ADMIN')) { %>
                                         <span class="d-block text-muted">Export entire records in database</span>
-                                        <% } else { %>
-                                        <span class="d-block text-muted">Export entire records in database</span>
-                                        <% } %>
                                     </span>
                                 </span>
                             </label>
@@ -133,13 +129,15 @@ document.addEventListener("DOMContentLoaded", () => {
         console.log('Export modal - selectedIds input value:', joinedIds);
 
         // Update hidden input for form submission
-        selectedIdsInput.value = joinedIds;
+        if (selectedIdsInput) {
+            selectedIdsInput.value = joinedIds;
+        }
 
         // Enable/disable export options
         const hasSelection = storedItems.length > 0;
-        exportMultipleInvoice.disabled = !hasSelection;
-        exportMultipleRow.disabled = !hasSelection;
-        exportMultipleInvoiceStamped.disabled = !hasSelection;
+        if (exportMultipleInvoice) exportMultipleInvoice.disabled = !hasSelection;
+        if (exportMultipleRow) exportMultipleRow.disabled = !hasSelection;
+        if (exportMultipleInvoiceStamped) exportMultipleInvoiceStamped.disabled = !hasSelection;
 
         // Reset radio if no selection
         if (!hasSelection) {
@@ -155,21 +153,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // Watch for modal open to re-sync with latest localStorage
     const modal = document.getElementById("modal-export-billing");
-    modal.addEventListener("show.bs.modal", updateExportState);
+    if (modal) {
+        modal.addEventListener("show.bs.modal", updateExportState);
+    }
 
     // Detect user click on disabled export options
     [exportMultipleInvoice, exportMultipleRow, exportMultipleInvoiceStamped].forEach(el => {
-        el.closest(".form-selectgroup-item").addEventListener("click", (e) => {
-            if (el.disabled) {
-                e.preventDefault();
-                Swal.fire({
-                    icon: "warning",
-                    title: "No Items Selected",
-                    text: "Please select at least one billing record before exporting multiple.",
-                    confirmButtonText: "OK",
+        if (el) {
+            const parent = el.closest(".form-selectgroup-item");
+            if (parent) {
+                parent.addEventListener("click", (e) => {
+                    if (el.disabled) {
+                        e.preventDefault();
+                        Swal.fire({
+                            icon: "warning",
+                            title: "No Items Selected",
+                            text: "Please select at least one billing record before exporting multiple.",
+                            confirmButtonText: "OK",
+                        });
+                    }
                 });
             }
-        });
+        }
     });
 
     // Initialize on load
@@ -316,7 +321,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 
                 // Get filename from Content-Disposition header
                 const contentDisposition = response.headers.get('Content-Disposition');
-                let filename = reportType === 'CURRENT' ? 'export.csv' : 'export.xlsx';
+                let filename = 'export.xlsx';
                 if (contentDisposition) {
                     const matches = /filename="([^"]+)"/.exec(contentDisposition);
                     if (matches && matches[1]) {
@@ -399,6 +404,5 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 });
 </script>
-
 
 

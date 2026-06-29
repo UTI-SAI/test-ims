@@ -138,13 +138,15 @@
             const joinedIds = storedItems.join(",");
 
             // Update hidden input for form submission
-            selectedIdsInput.value = joinedIds;
+            if (selectedIdsInput) {
+                selectedIdsInput.value = joinedIds;
+            }
 
             // Enable/disable export options
             const hasSelection = storedItems.length > 0;
-            exportMultipleInvoice.disabled = !hasSelection;
-            exportMultipleRow.disabled = !hasSelection;
-            exportMultipleInvoiceStamped.disabled = !hasSelection;
+            if (exportMultipleInvoice) exportMultipleInvoice.disabled = !hasSelection;
+            if (exportMultipleRow) exportMultipleRow.disabled = !hasSelection;
+            if (exportMultipleInvoiceStamped) exportMultipleInvoiceStamped.disabled = !hasSelection;
 
             // Reset radio if no selection
             if (!hasSelection) {
@@ -160,21 +162,28 @@
 
         // Watch for modal open to re-sync with latest localStorage
         const modal = document.getElementById("modal-export-customer");
-        modal.addEventListener("show.bs.modal", updateExportState);
+        if (modal) {
+            modal.addEventListener("show.bs.modal", updateExportState);
+        }
 
         // Detect user click on disabled export options
         [exportMultipleInvoice, exportMultipleRow, exportMultipleInvoiceStamped].forEach(el => {
-            el.closest(".form-selectgroup-item").addEventListener("click", (e) => {
-                if (el.disabled) {
-                    e.preventDefault();
-                    Swal.fire({
-                        icon: "warning",
-                        title: "No Items Selected",
-                        text: "Please select at least one billing record before exporting multiple.",
-                        confirmButtonText: "OK",
+            if (el) {
+                const parent = el.closest(".form-selectgroup-item");
+                if (parent) {
+                    parent.addEventListener("click", (e) => {
+                        if (el.disabled) {
+                            e.preventDefault();
+                            Swal.fire({
+                                icon: "warning",
+                                title: "No Items Selected",
+                                text: "Please select at least one billing record before exporting multiple.",
+                                confirmButtonText: "OK",
+                            });
+                        }
                     });
                 }
-            });
+            }
         });
 
         // Initialize on load
@@ -321,7 +330,7 @@
                     
                     // Get filename from Content-Disposition header
                     const contentDisposition = response.headers.get('Content-Disposition');
-                    let filename = reportType === 'CURRENT' ? 'export.csv' : 'export.xlsx';
+                    let filename = 'export.xlsx';
                     if (contentDisposition) {
                         const matches = /filename="([^"]+)"/.exec(contentDisposition);
                         if (matches && matches[1]) {
